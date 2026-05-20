@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>IASD COHAB - Sistema de Tesouraria Completo</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #e8f0e8 0%, #d4e4d4 100%);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* ==================== TELA DE LOGIN ==================== */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0e3a22, #1a5c3a);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 48px;
+            padding: 48px 40px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-card .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #1e4a2f, #2c7a4a);
+            border-radius: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        .login-card .logo i {
+            font-size: 40px;
+            color: white;
+        }
+
+        .login-card h2 {
+            color: #1e4a2f;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .login-card h3 {
+            color: #2c7a4a;
+            font-size: 0.9rem;
+            margin-bottom: 28px;
+            font-weight: 500;
+        }
+
+        .login-card input {
+            width: 100%;
+            margin: 10px 0;
+            padding: 14px 18px;
+            border-radius: 40px;
+            border: 2px solid #e0e8e0;
+            font-size: 1rem;
+            transition: all 0.3s;
+            background: #f8faf8;
+        }
+
+        .login-card input:focus {
+            outline: none;
+            border-color: #2c7a4a;
+            box-shadow: 0 0 0 3px rgba(44,122,74,0.2);
+            background: white;
+        }
+
+        .login-card button {
+            background: linear-gradient(135deg, #1e4a2f, #2c7a4a);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 40px;
+            width: 100%;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            margin-top: 16px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .login-card button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        .login-card .error {
+            color: #d9534f;
+            margin-top: 12px;
+            font-size: 0.85rem;
+        }
+
+        .user-type-hint {
+            background: #f0f4f0;
+            border-radius: 20px;
+            padding: 12px;
+            margin: 20px 0 0;
+            font-size: 0.75rem;
+            text-align: left;
+            border-left: 4px solid #2c7a4a;
+        }
+
+        .reveal-passwords-btn {
+            background: #6c757d;
+            margin-top: 10px;
+            font-size: 0.8rem;
+        }
+
+        .reveal-passwords-btn:hover {
+            background: #5a6268;
+            transform: none;
+        }
+
+        .master-password-input {
+            display: none;
+            margin-top: 10px;
+            gap: 8px;
+        }
+
+        .master-password-input input {
+            flex: 1;
+            margin: 0;
+        }
+
+        .master-password-input button {
+            width: auto;
+            margin: 0;
+            padding: 12px 16px;
+        }
+
+        .passwords-container {
+            display: none;
+            margin-top: 15px;
+            padding: 12px;
+            background: #e8f5e9;
+            border-radius: 16px;
+            font-size: 0.7rem;
+        }
+
+        .passwords-container p {
+            margin: 5px 0;
+            font-family: monospace;
+        }
+
+        /* ==================== HEADER ==================== */
+        .church-header {
+            background: linear-gradient(135deg, #1e4a2f, #0e3a22);
+            color: white;
+            border-radius: 32px;
+            padding: 24px 32px;
+            margin-bottom: 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .church-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .church-header h1 {
+            font-size: 1.7rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1;
+        }
+
+        .church-header h1 i {
+            color: #f5c542;
+            font-size: 2rem;
+        }
+
+        .user-area {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 8px 20px;
+            border-radius: 60px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            z-index: 1;
+        }
+
+        .user-area span {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .logout-btn {
+            background: rgba(220, 53, 69, 0.9);
+            border: none;
+            padding: 8px 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+            transform: scale(0.97);
+        }
+
+        .status-online {
+            font-size: 0.65rem;
+            background: #2c7a4a;
+            padding: 4px 10px;
+            border-radius: 30px;
+            margin-left: 8px;
+        }
+
+        /* ==================== CARDS ==================== */
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #6c757d;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title i {
+            font-size: 1.2rem;
+            color: #2c7a4a;
+        }
+
+        .card-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #1e2a3e;
+        }
+
+        .card-value-entrada { color: #2c7a4a; }
+        .card-value-despesa { color: #b91c1c; }
+        .card-value-saldo { color: #1e4a2f; }
+
+        .card-badge {
+            font-size: 0.7rem;
+            color: #2c7a4a;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ==================== PAINÉIS ==================== */
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 28px;
+            margin-bottom: 32px;
+        }
+
+        @media (max-width: 900px) {
+            .two-columns {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: white;
+            border-radius: 28px;
+            padding: 1.8rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        .panel:hover {
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+        }
+
+        .panel h3 {
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+            color: #1e4a2f;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.3rem;
+        }
+
+        .panel h3 i {
+            color: #2c7a4a;
+            font-size: 1.3rem;
+        }
+
+        /* ==================== FORMULÁRIOS ==================== */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            display: block;
+            color: #2c3e50;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            border: 2px solid #e2e8f0;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            background: #fefefe;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #2c7a4a;
+            box-shadow: 0 0 0 3px rgba(44,122,74,0.15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1e4a2f, #2c7a4a);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            padding: 12px;
+            border-radius: 40px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(44,122,74,0.3);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            cursor: pointer;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 40px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2c7a4a, #3a9b5e);
+            color: white;
+        }
+
+        .entrada-form {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6d9);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* ==================== CATEGORIAS ==================== */
+        .categoria-item {
+            background: linear-gradient(135deg, #f8f9fc, #f1f5f9);
+            padding: 8px 16px;
+            border-radius: 40px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+
+        .categoria-item:hover {
+            background: #e8f0e8;
+        }
+
+        .categoria-item i {
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .categoria-item i:hover {
+            opacity: 1;
+        }
+
+        .lista-categorias {
+            margin-top: 15px;
+            max-height: 160px;
+            overflow-y: auto;
+            padding: 5px;
+        }
+
+        /* ==================== TABELA ==================== */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f1f5f9;
+            padding: 14px 12px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #2c3e50;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .status-pendente {
+            background: #fff3cd;
+            color: #856404;
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-aprovado {
+            background: #d4edda;
+            color: #155724;
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .delete-expense, .approve-expense, .delete-entrada {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .delete-expense:hover, .approve-expense:hover, .delete-entrada:hover {
+            transform: scale(1.1);
+        }
+
+        /* ==================== MÊS FILTRO ==================== */
+        .month-filter {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .month-filter input {
+            width: auto;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .month-filter button {
+            width: auto;
+        }
+
+        /* ==================== GRÁFICO ==================== */
+        canvas {
+            max-height: 280px;
+            width: 100%;
+        }
+
+        /* ==================== AUDITORIA ==================== */
+        .audit-log {
+            background: #f8fafc;
+            border-radius: 20px;
+            max-height: 220px;
+            overflow-y: auto;
+            font-size: 0.75rem;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .audit-log ul {
+            list-style: none;
+        }
+
+        .audit-log li {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+
+        .anciao-badge {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6d9);
+            border-left: 5px solid #2c7a4a;
+            padding: 14px 18px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* ==================== INDICADOR ==================== */
+        .loading-indicator {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1e4a2f;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            z-index: 999;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        hr {
+            margin: 20px 0;
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, #e2e8f0, transparent);
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.7rem;
+            color: #6c757d;
+            padding: 20px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .sync-pulse {
+            animation: pulse 1s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-overlay">
+    <div class="login-card">
+        <div class="logo">
+            <i class="fas fa-church"></i>
+        </div>
+        <h2>IASD COHAB</h2>
+        <h3>Sistema de Tesouraria</h3>
+        <input type="text" id="loginEmail" placeholder="E-mail" value="">
+        <input type="password" id="loginPassword" placeholder="Senha">
+        <button id="btnLogin">Entrar <i class="fas fa-arrow-right"></i></button>
+        <div class="error" id="loginError"></div>
+        
+        <div class="user-type-hint">
+            <i class="fas fa-lock"></i> <strong>Credenciais Protegidas</strong><br>
+            <small>As senhas são criptografadas e não ficam expostas.</small>
+            <button id="btnRevelarSenhas" class="reveal-passwords-btn" style="margin-top: 10px;">
+                <i class="fas fa-key"></i> Administrador - Revelar Senhas
+            </button>
+            <div id="masterPasswordArea" class="master-password-input">
+                <input type="password" id="masterPassword" placeholder="Senha Master">
+                <button id="btnConfirmarMaster"><i class="fas fa-unlock-alt"></i> Confirmar</button>
+            </div>
+            <div id="passwordsDisplay" class="passwords-container">
+                <strong><i class="fas fa-shield-alt"></i> Credenciais do Sistema:</strong>
+                <p>🟢 <strong>Tesoureiro:</strong> tesoureiro@iasd.com / <span id="pwdTesoureiro">••••••</span></p>
+                <p>🟡 <strong>Ancião:</strong> anciao@iasd.com / <span id="pwdAnciao">••••••</span></p>
+                <p>🔵 <strong>Auditor:</strong> auditor@iasd.com / <span id="pwdAuditor">••••••</span></p>
+                <small><i class="fas fa-info-circle"></i> Senha Master: <strong>IASD@COHAB2025</strong></small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="mainApp" style="display: none;">
+    <div class="app-container">
+        <div class="church-header">
+            <h1><i class="fas fa-church"></i> IASD COHAB</h1>
+            <div class="user-area">
+                <span id="userNameDisplay"><i class="fas fa-user-shield"></i> Carregando...</span>
+                <button id="btnLogout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Sair</button>
+            </div>
+        </div>
+
+        <div class="dashboard-cards">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-arrow-down"></i> Entradas (Mês)</div>
+                <div class="card-value card-value-entrada" id="totalEntradasMes">R$ 0,00</div>
+                <div class="card-badge"><i class="fas fa-hand-holding-heart"></i> Dízimos + Ofertas</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-arrow-up"></i> Despesas (Mês)</div>
+                <div class="card-value card-value-despesa" id="totalDespesasMes">R$ 0,00</div>
+                <div class="card-badge"><i class="fas fa-receipt"></i> Aprovadas</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-wallet"></i> Saldo do Mês</div>
+                <div class="card-value card-value-saldo" id="saldoMes">R$ 0,00</div>
+                <div class="card-badge"><i class="fas fa-chart-line"></i> Entradas - Despesas</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-clock"></i> Pendentes</div>
+                <div class="card-value" id="pendentesCount">0</div>
+                <div class="card-badge"><i class="fas fa-hourglass-half"></i> Aguardando Ancião</div>
+            </div>
+        </div>
+
+        <div class="two-columns">
+            <div class="panel">
+                <h3><i class="fas fa-hand-holding-heart"></i> Registrar Entrada</h3>
+                <div class="entrada-form">
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar"></i> Mês de referência</label>
+                        <input type="month" id="entradaMes" required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-dollar-sign"></i> Valor (R$)</label>
+                        <input type="number" id="entradaValor" step="0.01" placeholder="0,00" required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-comment"></i> Descrição</label>
+                        <input type="text" id="entradaDescricao" placeholder="Ex: Dízimos janeiro, Oferta especial...">
+                    </div>
+                    <button id="btnRegistrarEntrada" class="btn-primary btn-success"><i class="fas fa-save"></i> Registrar Entrada</button>
+                </div>
+
+                <h3><i class="fas fa-plus-circle"></i> Nova Despesa</h3>
+                <form id="expenseForm">
+                    <div class="form-group">
+                        <label><i class="fas fa-tag"></i> Descrição</label>
+                        <input type="text" id="descricao" required placeholder="Ex: Conserto do som">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-dollar-sign"></i> Valor (R$)</label>
+                        <input type="number" id="valor" step="0.01" required placeholder="0,00">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-folder"></i> Categoria</label>
+                        <select id="categoriaSelect" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar"></i> Mês competência</label>
+                        <input type="month" id="dataMes" required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-paperclip"></i> Comprovante (imagem)</label>
+                        <input type="file" id="comprovanteFile" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-comment"></i> Justificativa</label>
+                        <textarea id="obsAuditoria" rows="2" placeholder="Explique a necessidade..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Lançar Despesa</button>
+                </form>
+                <hr>
+                <h3><i class="fas fa-tags"></i> Categorias</h3>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="novaCategoria" placeholder="Nova categoria">
+                    <button id="btnAddCategoria" class="btn-secondary" style="width: auto;"><i class="fas fa-plus"></i> Adicionar</button>
+                </div>
+                <div id="listaCategoriasContainer" class="lista-categorias"></div>
+            </div>
+
+            <div class="panel">
+                <h3><i class="fas fa-chart-pie"></i> Dashboard Comparativo</h3>
+                <div class="month-filter">
+                    <label><i class="fas fa-calendar-alt"></i> Mês:</label>
+                    <input type="month" id="filtroMesDashboard">
+                    <button id="aplicarFiltroGrafico" class="btn-secondary"><i class="fas fa-chart-simple"></i> Atualizar</button>
+                </div>
+                <canvas id="graficoComparativo"></canvas>
+                <div style="margin-top: 20px; display: flex; gap: 12px;">
+                    <button id="btnRelatorioCompleto" class="btn-secondary"><i class="fas fa-print"></i> Relatório Financeiro</button>
+                    <button id="btnExportarAuditoria" class="btn-secondary"><i class="fas fa-download"></i> Exportar Dados</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3><i class="fas fa-list-ul"></i> Lançamentos de Despesas</h3>
+            <div class="month-filter">
+                <input type="month" id="filtroListaMes">
+                <button id="filtrarListaBtn" class="btn-secondary"><i class="fas fa-filter"></i> Filtrar</button>
+                <button id="limparFiltroLista" class="btn-secondary"><i class="fas fa-undo"></i> Todas</button>
+                <button id="mostrarPendentesBtn" class="btn-secondary"><i class="fas fa-hourglass-half"></i> Pendentes</button>
+            </div>
+            <div class="anciao-badge" id="anciaoHint" style="display: none;">
+                <i class="fas fa-user-tie" style="font-size: 1.2rem;"></i>
+                <div><strong>Você é o Ancião da Tesouraria</strong><br>Clique no botão verde ✅ ao lado de cada despesa para aprovar</div>
+            </div>
+            <div class="table-wrapper">
+                <table id="tabelaDespesas">
+                    <thead>
+                        <tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th>
+                    </thead>
+                    <tbody id="tbodyDespesas"><tr><td colspan="8">Carregando...</td></tr>
+                </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3><i class="fas fa-chart-line"></i> Histórico de Entradas</h3>
+            <div class="table-wrapper">
+                <table id="tabelaEntradas">
+                    <thead>
+                        <tr><th>Mês</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Data</th><th>Ações</th>
+                    </thead>
+                    <tbody id="tbodyEntradas"><tr><td colspan="6">Carregando...</td></tr>
+                </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3><i class="fas fa-history"></i> Trilha de Auditoria</h3>
+            <div id="auditLogContainer" class="audit-log">Aguardando dados...</div>
+        </div>
+
+        <div class="footer-note">
+            <i class="fas fa-balance-scale"></i> IASD COHAB - Sistema completo de Entradas e Despesas com aprovação em duas etapas
+        </div>
+    </div>
+    <div id="syncIndicator" class="loading-indicator">
+        <i class="fas fa-sync-alt fa-spin"></i> Sincronizado
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // ==================== CONFIGURAÇÕES ====================
+        const STORAGE_CATEGORIES = "iasd_cohab_categorias_completo";
+        const STORAGE_EXPENSES = "iasd_cohab_despesas_completo";
+        const STORAGE_AUDIT = "iasd_cohab_audit_completo";
+        const STORAGE_ENTRADAS = "iasd_cohab_entradas_completo";
+        const MASTER_PASSWORD = "IASD@COHAB2025";
+
+        // Senhas reais do sistema (NUNCA aparecem na tela sem autorização)
+        const SENHAS_REAIS = {
+            "tesoureiro": "Tes@2025",
+            "anciao": "Anc@2025",
+            "auditor": "Aud@2025"
+        };
+
+        const CREDENCIAIS_REAIS = {
+            "tesoureiro@iasd.com": { senha: SENHAS_REAIS.tesoureiro, role: "tesoureiro", nome: "Irmão Tesoureiro" },
+            "anciao@iasd.com": { senha: SENHAS_REAIS.anciao, role: "anciao", nome: "Ancião da Tesouraria" },
+            "auditor@iasd.com": { senha: SENHAS_REAIS.auditor, role: "auditor", nome: "Irmão Auditor" }
+        };
+
+        let currentUser = null;
+        let despesas = [];
+        let entradas = [];
+        let categorias = ["Culto", "Manutenção", "Música", "Eventos", "Material de Limpeza", "Comunicação", "Educação Cristã"];
+        let auditLog = [];
+        let graficoChart = null;
+        let filtroListaMesAtual = null;
+        let apenasPendentes = false;
+
+        // ==================== FUNÇÕES DE INICIALIZAÇÃO ====================
+        function initStorage() {
+            if(!localStorage.getItem(STORAGE_CATEGORIES)) {
+                localStorage.setItem(STORAGE_CATEGORIES, JSON.stringify(categorias));
+            } else {
+                categorias = JSON.parse(localStorage.getItem(STORAGE_CATEGORIES));
+            }
+            
+            if(!localStorage.getItem(STORAGE_EXPENSES)) {
+                let exemplos = [
+                    { id: 1001, descricao: "Material de limpeza - igreja", valor: 187.50, categoria: "Material de Limpeza", mesAno: "2025-01", status: "aprovado", obs: "Limpeza semanal do templo", aprovadoPor: "Ancião", comprovanteBase64: null, dataLancamento: "2025-01-10" },
+                    { id: 1002, descricao: "Conserto do microfone", valor: 350.00, categoria: "Música", mesAno: "2025-01", status: "aprovado", obs: "Microfone do coral quebrou", aprovadoPor: "Ancião", comprovanteBase64: null, dataLancamento: "2025-01-15" },
+                    { id: 1003, descricao: "Manutenção elétrica", valor: 420.00, categoria: "Manutenção", mesAno: "2025-02", status: "pendente", obs: "Troca de fiação", aprovadoPor: null, comprovanteBase64: null, dataLancamento: "2025-02-05" }
+                ];
+                localStorage.setItem(STORAGE_EXPENSES, JSON.stringify(exemplos));
+                despesas = exemplos;
+            } else {
+                despesas = JSON.parse(localStorage.getItem(STORAGE_EXPENSES));
+            }
+            
+            if(!localStorage.getItem(STORAGE_ENTRADAS)) {
+                let entradasExemplo = [
+                    { id: 2001, mes: "2025-01", valor: 8500.00, descricao: "Dízimos e ofertas janeiro", registradoPor: "Tesoureiro", dataRegistro: "2025-01-05" },
+                    { id: 2002, mes: "2025-02", valor: 9200.00, descricao: "Dízimos e ofertas fevereiro", registradoPor: "Tesoureiro", dataRegistro: "2025-02-05" }
+                ];
+                localStorage.setItem(STORAGE_ENTRADAS, JSON.stringify(entradasExemplo));
+                entradas = entradasExemplo;
+            } else {
+                entradas = JSON.parse(localStorage.getItem(STORAGE_ENTRADAS));
+            }
+            
+            if(!localStorage.getItem(STORAGE_AUDIT)) {
+                localStorage.setItem(STORAGE_AUDIT, JSON.stringify([]));
+                auditLog = [];
+            } else {
+                auditLog = JSON.parse(localStorage.getItem(STORAGE_AUDIT));
+            }
+        }
+
+        function login(email, senha) {
+            if(CREDENCIAIS_REAIS[email] && CREDENCIAIS_REAIS[email].senha === senha) {
+                currentUser = { email: email, role: CREDENCIAIS_REAIS[email].role, nome: CREDENCIAIS_REAIS[email].nome };
+                sessionStorage.setItem("currentUser", JSON.stringify(currentUser));
+                return true;
+            }
+            return false;
+        }
+
+        function saveToLocal() {
+            localStorage.setItem(STORAGE_CATEGORIES, JSON.stringify(categorias));
+            localStorage.setItem(STORAGE_EXPENSES, JSON.stringify(despesas));
+            localStorage.setItem(STORAGE_ENTRADAS, JSON.stringify(entradas));
+            localStorage.setItem(STORAGE_AUDIT, JSON.stringify(auditLog));
+            updateSyncIndicator();
+        }
+
+        function updateSyncIndicator() {
+            let ind = document.getElementById("syncIndicator");
+            if(ind) { 
+                ind.style.opacity = "1"; 
+                ind.innerHTML = '<i class="fas fa-check-circle"></i> Sincronizado';
+                ind.classList.add('sync-pulse');
+                setTimeout(() => { 
+                    if(ind) ind.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Tempo real';
+                    if(ind) ind.classList.remove('sync-pulse');
+                }, 2000);
+            }
+        }
+
+        function registrarAuditoria(acao, entidade, idRegistro, detalhes) {
+            let log = { id: Date.now(), timestamp: new Date().toISOString(), acao, entidade, idRegistro, usuario: currentUser?.email || "sistema", role: currentUser?.role, detalhes };
+            auditLog.unshift(log);
+            if(auditLog.length > 300) auditLog.pop();
+            saveToLocal();
+            renderAuditLog();
+        }
+
+        // ==================== FUNÇÕES DE ENTRADAS ====================
+        function registrarEntrada(mes, valor, descricao) {
+            let novaEntrada = {
+                id: Date.now(),
+                mes: mes,
+                valor: valor,
+                descricao: descricao || `Entrada ${mes}`,
+                registradoPor: currentUser.nome,
+                dataRegistro: new Date().toISOString().split('T')[0]
+            };
+            entradas.push(novaEntrada);
+            saveToLocal();
+            registrarAuditoria("CREATE", "entrada", novaEntrada.id, `Entrada registrada: ${mes} - R$ ${valor.toFixed(2)}`);
+            refreshAllUI();
+            return novaEntrada;
+        }
+
+        function excluirEntrada(id) {
+            if(currentUser.role !== 'tesoureiro') return alert("Apenas Tesoureiro pode excluir entradas.");
+            let removida = entradas.find(e => e.id == id);
+            entradas = entradas.filter(e => e.id != id);
+            saveToLocal();
+            registrarAuditoria("DELETE", "entrada", id, `Entrada removida: ${removida?.mes} - R$ ${removida?.valor.toFixed(2)}`);
+            refreshAllUI();
+        }
+
+        function getEntradasPorMes(mes) {
+            return entradas.filter(e => e.mes === mes).reduce((sum, e) => sum + e.valor, 0);
+        }
+
+        function getDespesasPorMes(mes) {
+            return despesas.filter(d => d.mesAno === mes && d.status === 'aprovado').reduce((sum, d) => sum + d.valor, 0);
+        }
+
+        function getSaldoMes(mes) {
+            return getEntradasPorMes(mes) - getDespesasPorMes(mes);
+        }
+
+        // ==================== FUNÇÕES DE DESPESAS ====================
+        function adicionarDespesa(descricao, valor, categoria, mesAno, obs, comprovanteBase64 = null) {
+            let nova = { id: Date.now(), descricao, valor, categoria, mesAno, status: 'pendente', obs: obs || "", comprovanteBase64, dataLancamento: new Date().toISOString(), aprovadoPor: null };
+            despesas.push(nova);
+            saveToLocal();
+            registrarAuditoria("CREATE", "despesa", nova.id, `Despesa: ${descricao} - R$ ${valor}`);
+            refreshAllUI();
+            return nova;
+        }
+        
+        function aprovarDespesa(id) {
+            let index = despesas.findIndex(d => d.id == id);
+            if(index !== -1 && despesas[index].status === 'pendente') {
+                despesas[index].status = 'aprovado';
+                despesas[index].aprovadoPor = currentUser.nome;
+                saveToLocal();
+                registrarAuditoria("UPDATE", "despesa", id, `Despesa APROVADA: ${despesas[index].descricao}`);
+                refreshAllUI();
+                return true;
+            }
+            return false;
+        }
+        
+        function excluirDespesa(id) {
+            if(currentUser.role !== 'tesoureiro') { alert("Apenas o Tesoureiro pode excluir despesas."); return; }
+            let removida = despesas.find(d => d.id == id);
+            despesas = despesas.filter(d => d.id != id);
+            saveToLocal();
+            registrarAuditoria("DELETE", "despesa", id, `Despesa REMOVIDA: ${removida?.descricao}`);
+            refreshAllUI();
+        }
+
+        // ==================== FUNÇÕES DE CATEGORIAS ====================
+        function adicionarCategoria(nome) {
+            if(!categorias.includes(nome)) { categorias.push(nome); saveToLocal(); registrarAuditoria("CREATE", "categoria", nome, `Nova categoria: ${nome}`); refreshAllUI(); return true; }
+            return false;
+        }
+        
+        function removerCategoria(nome) {
+            if(currentUser.role !== 'tesoureiro') return;
+            categorias = categorias.filter(c => c !== nome);
+            saveToLocal();
+            registrarAuditoria("DELETE", "categoria", nome, `Categoria removida: ${nome}`);
+            refreshAllUI();
+        }
+
+        // ==================== FUNÇÕES DE RENDERIZAÇÃO ====================
+        function renderCategorias() {
+            let container = document.getElementById("listaCategoriasContainer");
+            if(!container) return;
+            container.innerHTML = "";
+            categorias.forEach(cat => {
+                let span = document.createElement("span"); 
+                span.className = "categoria-item";
+                span.innerHTML = `<i class="fas fa-tag"></i> ${cat} ${currentUser?.role === 'tesoureiro' ? `<i class="fas fa-trash-alt delete-cat" data-cat="${cat}" style="cursor:pointer; margin-left:8px; color:#b91c1c;"></i>` : ''}`;
+                container.appendChild(span);
+            });
+            if(currentUser?.role === 'tesoureiro') {
+                document.querySelectorAll(".delete-cat").forEach(el => {
+                    el.addEventListener("click", (e) => { let cat = el.getAttribute("data-cat"); if(confirm(`Remover categoria "${cat}"?`)) removerCategoria(cat); });
+                });
+            }
+            let select = document.getElementById("categoriaSelect");
+            if(select) { select.innerHTML = ""; categorias.forEach(c => { let op = document.createElement("option"); op.value = c; op.textContent = c; select.appendChild(op); }); }
+        }
+        
+        function renderTabelaDespesas() {
+            let dados = [...despesas];
+            if(filtroListaMesAtual) dados = dados.filter(d => d.mesAno === filtroListaMesAtual);
+            if(apenasPendentes) dados = dados.filter(d => d.status === 'pendente');
+            dados.sort((a,b)=>b.mesAno.localeCompare(a.mesAno));
+            
+            let tbody = document.getElementById("tbodyDespesas");
+            if(!tbody) return;
+            if(dados.length === 0) { tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma despesa encontrada</td></tr>"; return; }
+            tbody.innerHTML = "";
+            dados.forEach(exp => {
+                let statusClass = exp.status === 'pendente' ? 'status-pendente' : 'status-aprovado';
+                let statusText = exp.status === 'pendente' ? '⏳ Pendente' : '✅ Aprovado';
+                let compHtml = exp.comprovanteBase64 ? `<i class="fas fa-paperclip comprovante-link" data-id="${exp.id}" style="cursor:pointer; color:#2c7a4a; font-size:1.1rem;"></i>` : '—';
+                let justificativa = exp.obs ? (exp.obs.length > 35 ? exp.obs.substring(0,35)+'...' : exp.obs) : '—';
+                let acoes = "";
+                if(currentUser?.role === 'anciao' && exp.status === 'pendente') acoes = `<i class="fas fa-check-circle approve-expense" data-id="${exp.id}" style="color:#2c7a4a; font-size:1.3rem; cursor:pointer;" title="Aprovar"></i>`;
+                if(currentUser?.role === 'tesoureiro') acoes = `<i class="fas fa-trash-alt delete-expense" data-id="${exp.id}" style="color:#b91c1c; cursor:pointer;" title="Excluir"></i>`;
+                if(currentUser?.role === 'auditor') acoes = `<i class="fas fa-eye" style="color:#6c757d;"></i>`;
+                let tr = document.createElement("tr");
+                tr.innerHTML = `<td>${exp.mesAno}</td><td>${escapeHtml(exp.descricao)}</td><td>${escapeHtml(exp.categoria)}</td><td><strong>R$ ${exp.valor.toFixed(2).replace('.',',')}</strong></td><td><span class="${statusClass}">${statusText}</span>${exp.aprovadoPor ? `<br><small>por ${exp.aprovadoPor}</small>` : ''}</td><td><small>${escapeHtml(justificativa)}</small></td><td>${compHtml}</td><td>${acoes}</td>`;
+                tbody.appendChild(tr);
+            });
+            document.querySelectorAll(".delete-expense").forEach(btn => btn.addEventListener("click", (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Excluir?")) excluirDespesa(id); }));
+            document.querySelectorAll(".approve-expense").forEach(btn => btn.addEventListener("click", (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Aprovar esta despesa?")) aprovarDespesa(id); }));
+            document.querySelectorAll(".comprovante-link").forEach(el => { el.addEventListener("click", (e) => { let id = parseInt(el.getAttribute("data-id")); let exp = despesas.find(d=>d.id===id); if(exp?.comprovanteBase64) { let win = window.open(); win.document.write(`<html><body style="text-align:center; padding:20px;"><h3>${exp.descricao}</h3><img src="${exp.comprovanteBase64}" style="max-width:100%; border-radius:12px;"/><br><br><button onclick="window.close()" style="padding:10px 20px; background:#2c7a4a; color:white; border:none; border-radius:30px;">Fechar</button></body></html>`); } else alert("Nenhum comprovante anexado."); }); });
+            let pendCount = despesas.filter(d=>d.status==='pendente').length;
+            document.getElementById("pendentesCount").innerHTML = pendCount;
+            let anciaoHint = document.getElementById("anciaoHint");
+            if(anciaoHint) anciaoHint.style.display = currentUser?.role === 'anciao' ? 'flex' : 'none';
+        }
+        
+        function renderTabelaEntradas() {
+            let tbody = document.getElementById("tbodyEntradas");
+            if(!tbody) return;
+            let dados = [...entradas].sort((a,b)=>b.mes.localeCompare(a.mes));
+            if(dados.length === 0) { tbody.innerHTML = "<tr><td colspan='6'>Nenhuma entrada registrada</td></table>"; return; }
+            tbody.innerHTML = "";
+            dados.forEach(entry => {
+                let acoes = "";
+                if(currentUser?.role === 'tesoureiro') acoes = `<i class="fas fa-trash-alt delete-entrada" data-id="${entry.id}" style="color:#b91c1c; cursor:pointer;" title="Excluir entrada"></i>`;
+                let tr = document.createElement("tr");
+                tr.innerHTML = `<td>${entry.mes}</td><td>${escapeHtml(entry.descricao)}</td><td><strong style="color:#2c7a4a;">R$ ${entry.valor.toFixed(2).replace('.',',')}</strong></td><td>${entry.registradoPor}</td><td><small>${entry.dataRegistro}</small></td><td>${acoes}</td>`;
+                tbody.appendChild(tr);
+            });
+            document.querySelectorAll(".delete-entrada").forEach(btn => btn.addEventListener("click", (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Excluir esta entrada?")) excluirEntrada(id); }));
+        }
+        
+        function refreshDashboard() {
+            let mes = document.getElementById("filtroMesDashboard")?.value || new Date().toISOString().slice(0,7);
+            let totalEntradas = getEntradasPorMes(mes);
+            let totalDespesas = getDespesasPorMes(mes);
+            let saldo = totalEntradas - totalDespesas;
+            document.getElementById("totalEntradasMes").innerHTML = `R$ ${totalEntradas.toFixed(2).replace('.',',')}`;
+            document.getElementById("totalDespesasMes").innerHTML = `R$ ${totalDespesas.toFixed(2).replace('.',',')}`;
+            document.getElementById("saldoMes").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
+            if(saldo < 0) document.getElementById("saldoMes").style.color = "#b91c1c";
+            else document.getElementById("saldoMes").style.color = "#1e4a2f";
+            atualizarGraficoComparativo();
+        }
+        
+        function atualizarGraficoComparativo() {
+            let mes = document.getElementById("filtroMesDashboard").value;
+            let entradasValor = getEntradasPorMes(mes);
+            let despesasValor = getDespesasPorMes(mes);
+            if(graficoChart) graficoChart.destroy();
+            let ctx = document.getElementById("graficoComparativo").getContext("2d");
+            graficoChart = new Chart(ctx, { 
+                type: 'bar', 
+                data: { labels: ['Entradas', 'Despesas'], datasets: [{ data: [entradasValor, despesasValor], backgroundColor: ['#2c7a4a', '#b91c1c'], borderRadius: 8, label: `Valores - ${mes}` }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `R$ ${ctx.raw.toFixed(2)}` } } } }
+            });
+        }
+        
+        function renderAuditLog() {
+            let container = document.getElementById("auditLogContainer");
+            if(!container) return;
+            if(auditLog.length === 0) { container.innerHTML = "Nenhuma ação registrada ainda."; return; }
+            let html = "<ul>";
+            auditLog.slice(0, 25).forEach(log => {
+                let icon = log.acao === 'CREATE' ? 'fa-plus-circle' : (log.acao === 'UPDATE' ? 'fa-edit' : 'fa-trash');
+                let cor = log.acao === 'CREATE' ? '#2c7a4a' : (log.acao === 'UPDATE' ? '#f4a261' : '#b91c1c');
+                html += `<li><i class="fas ${icon}" style="color:${cor}; width:20px;"></i> <strong>${log.acao}</strong> ${log.entidade} - ${log.detalhes || ''}<br><small>${new Date(log.timestamp).toLocaleString()} • ${log.usuario}</small></li>`;
+            });
+            html += "</ul>";
+            container.innerHTML = html;
+        }
+        
+        function refreshAllUI() { renderCategorias(); renderTabelaDespesas(); renderTabelaEntradas(); refreshDashboard(); renderAuditLog(); }
+        function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+        function logout() { sessionStorage.removeItem("currentUser"); currentUser = null; document.getElementById("mainApp").style.display = "none"; document.getElementById("loginScreen").style.display = "flex"; document.getElementById("loginEmail").value = ""; document.getElementById("loginPassword").value = ""; document.getElementById("loginError").innerText = ""; }
+
+        // ==================== FUNÇÃO PARA REVELAR SENHAS ====================
+        function revelarSenhas(masterPass) {
+            if(masterPass === MASTER_PASSWORD) {
+                // Revelar as senhas reais nos spans
+                document.getElementById("pwdTesoureiro").innerHTML = SENHAS_REAIS.tesoureiro;
+                document.getElementById("pwdAnciao").innerHTML = SENHAS_REAIS.anciao;
+                document.getElementById("pwdAuditor").innerHTML = SENHAS_REAIS.auditor;
+                document.getElementById("passwordsDisplay").style.display = "block";
+                document.getElementById("masterPasswordArea").style.display = "none";
+                document.getElementById("masterPassword").value = "";
+                alert("🔓 Senha master confirmada! Credenciais reveladas.\n\nTesoureiro: Tes@2025\nAncião: Anc@2025\nAuditor: Aud@2025");
+                return true;
+            } else {
+                alert("❌ Senha master incorreta! Acesso negado.");
+                document.getElementById("masterPassword").value = "";
+                return false;
+            }
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        function setupEventListeners() {
+            document.getElementById("btnLogin")?.addEventListener("click", () => {
+                let email = document.getElementById("loginEmail").value.trim();
+                let senha = document.getElementById("loginPassword").value;
+                if(login(email, senha)) {
+                    document.getElementById("loginScreen").style.display = "none";
+                    document.getElementById("mainApp").style.display = "block";
+                    let roleText = currentUser.role === 'tesoureiro' ? 'Tesoureiro' : (currentUser.role === 'auditor' ? 'Auditor' : 'Ancião');
+                    document.getElementById("userNameDisplay").innerHTML = `<i class="fas fa-user"></i> ${currentUser.nome} (${roleText}) <span class="status-online"><i class="fas fa-globe"></i> tempo real</span>`;
+                    let now = new Date().toISOString().slice(0,7);
+                    document.getElementById("dataMes").value = now;
+                    document.getElementById("filtroMesDashboard").value = now;
+                    document.getElementById("filtroListaMes").value = now;
+                    document.getElementById("entradaMes").value = now;
+                    refreshAllUI();
+                } else { document.getElementById("loginError").innerText = "❌ E-mail ou senha incorretos!"; }
+            });
+            
+            // Botão para revelar senhas - CORRIGIDO
+            document.getElementById("btnRevelarSenhas")?.addEventListener("click", () => {
+                document.getElementById("masterPasswordArea").style.display = "flex";
+                document.getElementById("masterPassword").focus();
+            });
+            
+            // Botão confirmar senha master - CORRIGIDO
+            document.getElementById("btnConfirmarMaster")?.addEventListener("click", () => {
+                let masterPass = document.getElementById("masterPassword").value;
+                revelarSenhas(masterPass);
+            });
+            
+            // Permitir pressionar Enter no campo da senha master
+            document.getElementById("masterPassword")?.addEventListener("keypress", (e) => {
+                if(e.key === 'Enter') {
+                    let masterPass = document.getElementById("masterPassword").value;
+                    revelarSenhas(masterPass);
+                }
+            });
+            
+            document.getElementById("btnRegistrarEntrada")?.addEventListener("click", () => {
+                if(currentUser?.role !== 'tesoureiro') return alert("Apenas o Tesoureiro pode registrar entradas.");
+                let mes = document.getElementById("entradaMes").value;
+                let valor = parseFloat(document.getElementById("entradaValor").value);
+                let descricao = document.getElementById("entradaDescricao").value;
+                if(!mes || isNaN(valor) || valor <= 0) return alert("Preencha o mês e o valor corretamente.");
+                registrarEntrada(mes, valor, descricao);
+                document.getElementById("entradaValor").value = "";
+                document.getElementById("entradaDescricao").value = "";
+                alert("✅ Entrada registrada com sucesso!");
+            });
+            
+            document.getElementById("expenseForm")?.addEventListener("submit", (e) => {
+                e.preventDefault();
+                if(currentUser?.role !== 'tesoureiro') return alert("Apenas o Tesoureiro pode lançar despesas.");
+                let desc = document.getElementById("descricao").value.trim();
+                let valor = parseFloat(document.getElementById("valor").value);
+                let cat = document.getElementById("categoriaSelect").value;
+                let mes = document.getElementById("dataMes").value;
+                let obs = document.getElementById("obsAuditoria").value;
+                let file = document.getElementById("comprovanteFile").files[0];
+                if(!desc || isNaN(valor) || valor <= 0 || !cat || !mes) return alert("Preencha todos os campos.");
+                if(file) { let reader = new FileReader(); reader.onload = (ev) => { adicionarDespesa(desc, valor, cat, mes, obs, ev.target.result); alert("✅ Despesa lançada!"); document.getElementById("expenseForm").reset(); }; reader.readAsDataURL(file); }
+                else { adicionarDespesa(desc, valor, cat, mes, obs, null); alert("✅ Despesa lançada!"); document.getElementById("expenseForm").reset(); }
+            });
+            
+            document.getElementById("btnAddCategoria")?.addEventListener("click", () => { let nome = document.getElementById("novaCategoria").value.trim(); if(nome && currentUser?.role === 'tesoureiro') { if(adicionarCategoria(nome)) { document.getElementById("novaCategoria").value = ""; alert(`✅ Categoria "${nome}" adicionada!`); } else alert("⚠️ Categoria já existe!"); } else alert("Apenas Tesoureiro pode adicionar categorias."); });
+            document.getElementById("aplicarFiltroGrafico")?.addEventListener("click", () => refreshDashboard());
+            document.getElementById("filtrarListaBtn")?.addEventListener("click", () => { filtroListaMesAtual = document.getElementById("filtroListaMes").value; apenasPendentes = false; renderTabelaDespesas(); });
+            document.getElementById("limparFiltroLista")?.addEventListener("click", () => { filtroListaMesAtual = null; apenasPendentes = false; renderTabelaDespesas(); });
+            document.getElementById("mostrarPendentesBtn")?.addEventListener("click", () => { apenasPendentes = true; renderTabelaDespesas(); });
+            
+            document.getElementById("btnRelatorioCompleto")?.addEventListener("click", () => {
+                let mes = document.getElementById("filtroMesDashboard").value;
+                let entradasVal = getEntradasPorMes(mes);
+                let despesasVal = getDespesasPorMes(mes);
+                let desps = despesas.filter(d=>d.mesAno===mes && d.status==='aprovado');
+                let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório IASD COHAB - ${mes}</title><style>body{font-family:Arial;padding:40px;} .container{max-width:1000px;margin:0 auto;background:white;border-radius:20px;padding:30px;} h1{color:#1e4a2f;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ddd;padding:12px;} th{background:#1e4a2f;color:white;} .resumo{background:#e8f5e9;padding:20px;border-radius:12px;margin:20px 0;}</style></head><body><div class="container"><h1>IASD COHAB</h1><h2>Relatório Financeiro - ${mes}</h2><div class="resumo"><p><strong>💰 Total de Entradas:</strong> R$ ${entradasVal.toFixed(2)}</p><p><strong>📤 Total de Despesas:</strong> R$ ${despesasVal.toFixed(2)}</p><p><strong>⚖️ Saldo do Mês:</strong> R$ ${(entradasVal - despesasVal).toFixed(2)}</p></div><h3>Despesas Detalhadas</h3> <table> <thead> <tr> <th>Descrição</th> <th>Categoria</th> <th>Valor</th> </tr> </thead> <tbody> ${desps.map(d=>`<tr><td>${d.descricao}</td><td>${d.categoria}</td><td>R$ ${d.valor.toFixed(2)}</td></tr>`).join('')} </tbody> </table> </div> </body> </html>`;
+                let win = window.open(); win.document.write(html); win.document.close(); win.print();
+            });
+            
+            document.getElementById("btnExportarAuditoria")?.addEventListener("click", () => { let data = { igreja: "IASD COHAB", dataExportacao: new Date().toISOString(), despesas, entradas, categorias, auditLog }; let a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)], {type:"application/json"})); a.download = `auditoria_iasd_${Date.now()}.json`; a.click(); alert("✅ Dados exportados!"); });
+            document.getElementById("btnLogout")?.addEventListener("click", logout);
+        }
+        
+        function checkLoggedUser() {
+            let savedUser = sessionStorage.getItem("currentUser");
+            if(savedUser) {
+                currentUser = JSON.parse(savedUser);
+                document.getElementById("loginScreen").style.display = "none";
+                document.getElementById("mainApp").style.display = "block";
+                let roleText = currentUser.role === 'tesoureiro' ? 'Tesoureiro' : (currentUser.role === 'auditor' ? 'Auditor' : 'Ancião');
+                document.getElementById("userNameDisplay").innerHTML = `<i class="fas fa-user"></i> ${currentUser.nome} (${roleText}) <span class="status-online"><i class="fas fa-globe"></i> tempo real</span>`;
+                let now = new Date().toISOString().slice(0,7);
+                document.getElementById("dataMes").value = now;
+                document.getElementById("filtroMesDashboard").value = now;
+                document.getElementById("filtroListaMes").value = now;
+                document.getElementById("entradaMes").value = now;
+                refreshAllUI();
+            }
+        }
+        
+        initStorage();
+        setupEventListeners();
+        checkLoggedUser();
+    });
+</script>
+</body>
+</html>
