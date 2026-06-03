@@ -313,7 +313,7 @@
                 <h3><i class="fas fa-list-ul"></i> Lançamentos</h3>
                 <div class="month-filter"><input type="month" id="filtroListaMes"><button id="filtrarListaBtn" class="btn-secondary">Filtrar</button><button id="limparFiltroLista" class="btn-secondary">Todas</button><button id="mostrarPendentesBtn" class="btn-secondary">Pendentes</button></div>
                 <div class="anciao-badge" id="anciaoHint" style="display: none;"><i class="fas fa-user-tie"></i><div><strong>Você é o Ancião</strong><br>Clique ✅ para aprovar</div></div>
-                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th><tr></thead><tbody id="tbodyDespesas"></tbody></table></div>
+                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th></td></thead><tbody id="tbodyDespesas"></tbody></table></div>
             </div>
 
             <div class="panel"><h3><i class="fas fa-chart-line"></i> Histórico de Entradas</h3><div class="table-wrapper"><table id="tabelaEntradas"><thead><tr><th>Mês</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Data</th><th>Ações</th></tr></thead><tbody id="tbodyEntradas"></tbody></table></div></div>
@@ -321,7 +321,7 @@
             <div class="panel"><h3><i class="fas fa-history"></i> Trilha de Auditoria</h3><div id="auditLogContainer" class="audit-log">Aguardando dados...</div></div>
         </div>
 
-        <!-- ABA CONSTRUÇÃO/OBRA - CORRIGIDA PARA MOSTRAR DIFERENTE POR PERFIL -->
+        <!-- ABA CONSTRUÇÃO/OBRA -->
         <div id="tab-obra" class="tab-content">
             <div class="dashboard-cards">
                 <div class="card"><div class="card-title"><i class="fas fa-hand-holding-heart"></i> Total Doações</div><div class="card-value card-value-entrada" id="obraTotalDoacoes">R$ 0,00</div><div class="card-badge"><i class="fas fa-chart-line"></i> Para a obra</div></div>
@@ -339,7 +339,6 @@
                 <div class="panel">
                     <h3><i class="fas fa-tasks"></i> Etapas da Obra</h3>
                     <div id="etapasContainer"><div style="text-align:center; padding:20px; color:#6c757d;">Nenhuma etapa cadastrada. Clique em "+ Nova Etapa" para começar.</div></div>
-                    <!-- Só Tesoureiro pode adicionar etapas -->
                     <div id="novaEtapaPanel" class="entrada-form" style="margin-top: 15px; display: none;">
                         <h4>➕ Nova Etapa</h4>
                         <div class="form-group"><label>Nome da Etapa</label><input type="text" id="novaEtapaNome" placeholder="Ex: Fundação"></div>
@@ -349,7 +348,6 @@
                 </div>
             </div>
 
-            <!-- Registrar Doação para a Obra - Só Tesoureiro vê -->
             <div id="registrarDoacaoPanel" class="panel" style="display: none;">
                 <h3><i class="fas fa-hand-holding-heart"></i> Registrar Doação para a Obra</h3>
                 <div class="entrada-form">
@@ -363,7 +361,6 @@
                 </div>
             </div>
 
-            <!-- Histórico de Doações da Obra - Todos veem -->
             <div class="panel">
                 <h3><i class="fas fa-list-ul"></i> Histórico de Doações para a Obra</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
@@ -381,7 +378,6 @@
                 </div>
             </div>
 
-            <!-- Gastos da Construção - Todos veem -->
             <div class="panel">
                 <h3><i class="fas fa-hard-hat"></i> Gastos da Construção</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
@@ -397,7 +393,6 @@
                 </div>
             </div>
 
-            <!-- Registrar Gasto da Construção - Só Tesoureiro vê -->
             <div id="registrarGastoPanel" class="panel" style="display: none;">
                 <h3><i class="fas fa-plus-circle"></i> Registrar Gasto da Construção</h3>
                 <div class="entrada-form" style="margin-bottom: 0;">
@@ -458,11 +453,8 @@
     let filtroEtapaObra = "";
     let filtroDoacaoObraMes = "";
 
-    // ==================== FUNÇÃO PARA MOSTRAR/ESCONDER PAINÉIS POR PERFIL ====================
     function ajustarPermissoesPorPerfil() {
         const isTesoureiro = currentUser?.role === 'tesoureiro';
-        
-        // Painéis que só Tesoureiro vê
         const registrarDoacaoPanel = document.getElementById("registrarDoacaoPanel");
         const registrarGastoPanel = document.getElementById("registrarGastoPanel");
         const novaEtapaPanel = document.getElementById("novaEtapaPanel");
@@ -472,7 +464,6 @@
         if(novaEtapaPanel) novaEtapaPanel.style.display = isTesoureiro ? 'block' : 'none';
     }
     
-    // ==================== FUNÇÕES DE APROVAÇÃO ====================
     async function aprovarDespesa(id) {
         const despesa = despesas.find(d => d.id === id);
         if(despesa && despesa.status === 'pendente') {
@@ -492,13 +483,17 @@
         }
     }
     
-    // ==================== FUNÇÕES DE CARREGAMENTO ====================
     async function carregarDados() {
+        console.log("🔄 Carregando dados...");
+        
         const despesasSnap = await database.ref('despesas').once('value');
         despesas = despesasSnap.val() ? Object.values(despesasSnap.val()) : [];
         
         const entradasSnap = await database.ref('entradas').once('value');
         entradas = entradasSnap.val() ? Object.values(entradasSnap.val()) : [];
+        
+        console.log("📊 Entradas carregadas:", entradas);
+        console.log("📝 Despesas carregadas:", despesas);
         
         const doacoesSnap = await database.ref('obra/doacoes').once('value');
         doacoesObra = doacoesSnap.val() ? Object.values(doacoesSnap.val()) : [];
@@ -548,7 +543,14 @@
             
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td>${exp.mesAno}${exp.descricao}${exp.categoria}<strong>R$ ${exp.valor.toFixed(2).replace('.',',')}</strong><span class="${statusClass}">${statusText}</span>${exp.aprovadoPor ? `<br><small>por ${exp.aprovadoPor}</small>` : ''}${exp.obs || '-'}${compHtml}${acoes}
+                <td>${exp.mesAno}</td>
+                <td>${escapeHtml(exp.descricao)}</td>
+                <td>${escapeHtml(exp.categoria)}</td>
+                <td><strong>R$ ${exp.valor.toFixed(2).replace('.',',')}</strong></td>
+                <td><span class="${statusClass}">${statusText}</span>${exp.aprovadoPor ? `<br><small>por ${exp.aprovadoPor}</small>` : ''}</td>
+                <td>${escapeHtml(exp.obs || '-')}</td>
+                <td>${compHtml}</td>
+                <td>${acoes}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -600,7 +602,14 @@
                 acoes = `<i class="fas fa-trash-alt delete-entrada" data-id="${entry.id}" style="color:#b91c1c; cursor:pointer;"></i>`;
             }
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td>${entry.mes}${entry.descricao}<strong style="color:#2c7a4a;">R$ ${entry.valor.toFixed(2).replace('.',',')}</strong>${entry.registradoPor}${entry.dataRegistro}${acoes}`;
+            tr.innerHTML = `
+                <td>${entry.mes}</td>
+                <td>${escapeHtml(entry.descricao)}</td>
+                <td><strong style="color:#2c7a4a;">R$ ${entry.valor.toFixed(2).replace('.',',')}</strong></td>
+                <td>${entry.registradoPor}</td>
+                <td>${entry.dataRegistro}</td>
+                <td>${acoes}</td>
+            `;
             tbody.appendChild(tr);
         });
         
@@ -615,23 +624,53 @@
         });
     }
     
-    function getEntradasPorMes(mes) { return entradas.filter(e => e.mes === mes).reduce((s,e) => s + e.valor, 0); }
-    function getDespesasPorMes(mes) { return despesas.filter(d => d.mesAno === mes && d.status === 'aprovado').reduce((s,d) => s + d.valor, 0); }
+    // FUNÇÃO CORRIGIDA - Cálculo de entradas por mês
+    function getEntradasPorMes(mes) {
+        const entradasFiltradas = entradas.filter(e => e.mes === mes);
+        const total = entradasFiltradas.reduce((s,e) => s + e.valor, 0);
+        console.log(`📊 Entradas em ${mes}:`, entradasFiltradas, "Total:", total);
+        return total;
+    }
     
+    // FUNÇÃO CORRIGIDA - Cálculo de despesas por mês
+    function getDespesasPorMes(mes) {
+        const despesasAprovadas = despesas.filter(d => d.mesAno === mes && d.status === 'aprovado');
+        const total = despesasAprovadas.reduce((s,d) => s + d.valor, 0);
+        console.log(`💰 Despesas aprovadas em ${mes}:`, despesasAprovadas, "Total:", total);
+        return total;
+    }
+    
+    // FUNÇÃO CORRIGIDA - Dashboard
     function refreshDashboard() {
         const mes = document.getElementById("filtroMesDashboard")?.value || new Date().toISOString().slice(0,7);
         const totalEntradas = getEntradasPorMes(mes);
         const totalDespesas = getDespesasPorMes(mes);
         const saldo = totalEntradas - totalDespesas;
+        
+        console.log(`📊 DASHBOARD - Mês: ${mes} | Entradas: R$ ${totalEntradas} | Despesas: R$ ${totalDespesas} | Saldo: R$ ${saldo}`);
+        
         document.getElementById("totalEntradasMes").innerHTML = `R$ ${totalEntradas.toFixed(2).replace('.',',')}`;
         document.getElementById("totalDespesasMes").innerHTML = `R$ ${totalDespesas.toFixed(2).replace('.',',')}`;
         document.getElementById("saldoMes").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
+        
         if(saldo < 0) document.getElementById("saldoMes").style.color = "#b91c1c";
         else document.getElementById("saldoMes").style.color = "#1e4a2f";
         
+        // Atualizar gráfico
         if(graficoChart) graficoChart.destroy();
         const ctx = document.getElementById("graficoComparativo").getContext("2d");
-        graficoChart = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Despesas Aprovadas'], datasets: [{ data: [totalEntradas, totalDespesas], backgroundColor: ['#2c7a4a', '#b91c1c'], borderRadius: 8 }] }, options: { responsive: true } });
+        graficoChart = new Chart(ctx, { 
+            type: 'bar', 
+            data: { 
+                labels: ['Entradas', 'Despesas Aprovadas'], 
+                datasets: [{ 
+                    data: [totalEntradas, totalDespesas], 
+                    backgroundColor: ['#2c7a4a', '#b91c1c'], 
+                    borderRadius: 8 
+                }] 
+            }, 
+            options: { responsive: true } 
+        });
     }
     
     // ==================== FUNÇÕES DA OBRA ====================
@@ -652,7 +691,14 @@
                 acoes = `<button class="btn-delete delete-doacao" data-id="${d.id}" style="background:#b91c1c; color:white; border:none; padding:4px 8px; border-radius:20px; cursor:pointer;"><i class="fas fa-trash"></i></button>`;
             }
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td>${d.data || '-'}${escapeHtml(d.doador || 'Anônimo')}${escapeHtml(d.descricao || 'Doação para obra')}<strong style="color:#2c7a4a;">R$ ${(d.valor || 0).toFixed(2).replace('.',',')}</strong>${d.registradoPor || '-'}${acoes}`;
+            tr.innerHTML = `
+                <td>${d.data || '-'}</td>
+                <td>${escapeHtml(d.doador || 'Anônimo')}</td>
+                <td>${escapeHtml(d.descricao || 'Doação para obra')}</td>
+                <td><strong style="color:#2c7a4a;">R$ ${(d.valor || 0).toFixed(2).replace('.',',')}</strong></td>
+                <td>${d.registradoPor || '-'}</td>
+                <td>${acoes}</td>
+            `;
             tbody.appendChild(tr);
         });
         
@@ -725,7 +771,15 @@
                     acoes = `<button class="btn-edit" onclick='editarGasto(${g.id})'><i class="fas fa-edit"></i></button><button class="btn-delete" onclick='excluirGasto(${g.id})'><i class="fas fa-trash"></i></button>`;
                 }
                 const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${g.data}${g.etapa}${g.descricao}${g.fornecedor || '-'}<strong>R$ ${g.valor.toFixed(2).replace('.',',')}</strong><span class="status-aprovado">✅ Aprovado</span>${acoes}`;
+                tr.innerHTML = `
+                    <td>${g.data}</td>
+                    <td>${g.etapa}</td>
+                    <td>${g.descricao}</td>
+                    <td>${g.fornecedor || '-'}</td>
+                    <td><strong>R$ ${g.valor.toFixed(2).replace('.',',')}</strong></td>
+                    <td><span class="status-aprovado">✅ Aprovado</span></td>
+                    <td>${acoes}</td>
+                `;
                 tbodyGastos.appendChild(tr);
             });
         }
@@ -761,7 +815,10 @@
         if(container) container.innerHTML = "Sistema pronto. Use os botões ✅ para aprovar despesas.";
     }
     
-    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+    function escapeHtml(str) { 
+        if(!str) return ''; 
+        return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); 
+    }
     
     // ==================== CRUD ====================
     async function adicionarDespesa(descricao, valor, categoria, mesAno, obs, comprovanteBase64 = null) {
@@ -771,11 +828,20 @@
         await carregarDados();
     }
     
+    // FUNÇÃO CORRIGIDA - Registrar Entrada
     async function registrarEntrada(mes, valor, descricao) {
-        const nova = { id: Date.now(), mes, valor, descricao: descricao || `Entrada ${mes}`, registradoPor: currentUser.nome, dataRegistro: new Date().toISOString().split('T')[0] };
+        const nova = { 
+            id: Date.now(), 
+            mes: mes, 
+            valor: parseFloat(valor), 
+            descricao: descricao || `Entrada ${mes}`, 
+            registradoPor: currentUser.nome, 
+            dataRegistro: new Date().toISOString().split('T')[0] 
+        };
+        console.log("💾 Salvando entrada:", nova);
         await database.ref(`entradas/${nova.id}`).set(nova);
-        alert("✅ Entrada registrada!");
-        await carregarDados();
+        alert(`✅ Entrada de R$ ${valor} registrada para ${mes}!`);
+        await carregarDados(); // Recarregar tudo para atualizar o dashboard
     }
     
     async function registrarDoacao(data, doador, descricao, valor) {
@@ -891,14 +957,19 @@
             document.getElementById("doacaoObraDescricao").value = "";
         });
         
+        // FUNÇÃO CORRIGIDA - Registrar Entrada
         document.getElementById("btnRegistrarEntrada")?.addEventListener("click", async () => {
             if(currentUser?.role !== 'tesoureiro') return alert("Apenas o Tesoureiro pode registrar entradas.");
             const mes = document.getElementById("entradaMes").value;
             const valor = parseFloat(document.getElementById("entradaValor").value);
             const descricao = document.getElementById("entradaDescricao").value;
-            if(!mes || isNaN(valor) || valor <= 0) return alert("Preencha corretamente.");
+            
+            if(!mes) { alert("Selecione o mês da entrada."); return; }
+            if(isNaN(valor) || valor <= 0) { alert("Digite um valor válido."); return; }
+            
             await registrarEntrada(mes, valor, descricao);
             document.getElementById("entradaValor").value = "";
+            document.getElementById("entradaDescricao").value = "";
         });
         
         document.getElementById("expenseForm")?.addEventListener("submit", async (e) => {
