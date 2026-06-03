@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>IASD COHAB - Sistema de Tesouraria + Controle de Obras</title>
+    <title>IASD COHAB - Sistema de Tesouraria</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -367,7 +367,7 @@
                 </div>
             </div>
 
-            <!-- Histórico de Doações da Obra -->
+            <!-- Histórico de Doações da Obra - CORRIGIDO -->
             <div class="panel">
                 <h3><i class="fas fa-list-ul"></i> Histórico de Doações para a Obra</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
@@ -375,11 +375,13 @@
                     <button id="btnFiltrarDoacaoObra" class="btn-secondary">Filtrar por Mês</button>
                     <button id="btnLimparFiltroDoacaoObra" class="btn-secondary">Limpar</button>
                     <button id="btnExportarDoacoesObra" class="btn-excel"><i class="fas fa-file-excel"></i> Exportar Doações</button>
-                    <button id="btnRecarregarDoacoes" class="btn-secondary btn-reload"><i class="fas fa-sync-alt"></i> Recarregar Doações</button>
+                    <button id="btnRecarregarDoacoes" class="btn-secondary btn-reload"><i class="fas fa-sync-alt"></i> Recarregar</button>
                 </div>
                 <div class="table-wrapper">
                     <table id="tabelaDoacoesObra">
-                        <thead><tr><th>Data</th><th>Doador</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Ações</th></tr></thead>
+                        <thead>
+                            <tr><th>Data</th><th>Doador</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Ações</th>
+                        </thead>
                         <tbody id="tbodyDoacoesObra"></tbody>
                     </table>
                 </div>
@@ -419,11 +421,12 @@
 
         <div class="footer-note"><i class="fas fa-balance-scale"></i> IASD COHAB - Dados em Nuvem (Firebase) - Sincronização em Tempo Real</div>
     </div>
-    <div id="syncIndicator" class="loading-indicator"><i class="fas fa-cloud-upload-alt"></i> Sincronizado com a nuvem</div>
+    <div id="syncIndicator" class="loading-indicator"><i class="fas fa-cloud-upload-alt"></i> Sincronizado</div>
     <div id="connectionStatus" class="connection-status"><i class="fas fa-wifi"></i> Online</div>
 </div>
 
 <script>
+    // Configuração do Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyAogWId8qBXRCSc6DET2t-Q355AxUFbGIY",
         authDomain: "iasd-cohab-tesouraria.firebaseapp.com",
@@ -436,15 +439,6 @@
     
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
-    
-    // Referências
-    const categoriasRef = database.ref('categorias');
-    const despesasRef = database.ref('despesas');
-    const entradasRef = database.ref('entradas');
-    const auditLogRef = database.ref('auditLog');
-    const obraEtapasRef = database.ref('obra/etapas');
-    const obraGastosRef = database.ref('obra/gastos');
-    const doacoesObraRef = database.ref('obra/doacoes');
     
     const MASTER_PASSWORD = "IASD@COHAB2025";
     const SENHAS_REAIS = { "tesoureiro": "Tes@2025", "anciao": "Anc@2025", "auditor": "Aud@2025" };
@@ -460,266 +454,88 @@
     let categorias = ["Culto", "Manutenção", "Música", "Eventos", "Material de Limpeza", "Comunicação", "Educação Cristã"];
     let auditLog = [];
     let graficoChart = null;
+    let graficoObraChart = null;
     let filtroListaMesAtual = null;
     let apenasPendentes = false;
     
     let obraEtapas = [];
     let obraGastos = [];
     let doacoesObra = [];
-    let graficoObraChart = null;
     let filtroEtapaObra = "";
     let filtroDoacaoObraMes = "";
-    
-    let isLoading = true;
-    
-    function updateSyncIndicator(connected = true) {
-        const ind = document.getElementById("syncIndicator");
-        const statusDiv = document.getElementById("connectionStatus");
-        if(ind) {
-            ind.innerHTML = connected ? '<i class="fas fa-cloud-upload-alt"></i> Sincronizado' : '<i class="fas fa-exclamation-triangle"></i> Offline';
-            ind.style.background = connected ? '#1e4a2f' : '#dc3545';
-        }
-        if(statusDiv) {
-            statusDiv.className = connected ? 'connection-status' : 'connection-status offline';
-            statusDiv.innerHTML = connected ? '<i class="fas fa-wifi"></i> Online' : '<i class="fas fa-plug"></i> Offline';
-        }
-    }
-    
-    // Listeners em tempo real
-    function setupRealtimeListeners() {
-        categoriasRef.on('value', (snapshot) => {
+
+    // ==================== FUNÇÃO PRINCIPAL PARA DOAÇÕES ====================
+    async function carregarDoacoes() {
+        try {
+            console.log("🔄 Carregando doações...");
+            const snapshot = await database.ref('obra/doacoes').once('value');
             const data = snapshot.val();
-            if(data) categorias = data;
-            else if(!data && isLoading) categoriasRef.set(categorias);
-            renderCategorias();
-            renderCategoriasSelect();
-        });
-        
-        despesasRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            despesas = data ? Object.values(data) : [];
-            renderTabelaDespesas();
-            refreshDashboard();
-        });
-        
-        entradasRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            entradas = data ? Object.values(data) : [];
-            renderTabelaEntradas();
-            refreshDashboard();
-        });
-        
-        auditLogRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            auditLog = data ? Object.values(data) : [];
-            renderAuditLog();
-        });
-        
-        obraEtapasRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            obraEtapas = data ? Object.values(data) : [];
-            atualizarRealizadoEtapas();
-            renderObra();
-        });
-        
-        obraGastosRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            obraGastos = data ? Object.values(data) : [];
-            atualizarRealizadoEtapas();
-            renderObra();
-        });
-        
-        doacoesObraRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            doacoesObra = data ? Object.values(data) : [];
-            console.log("Doações carregadas:", doacoesObra.length);
+            
+            if(data) {
+                doacoesObra = Object.values(data);
+                console.log(`✅ ${doacoesObra.length} doações carregadas`);
+            } else {
+                doacoesObra = [];
+                console.log("ℹ️ Nenhuma doação encontrada");
+            }
+            
+            renderTabelaDoacoes();
             atualizarCardsObra();
-            renderTabelaDoacoesObra();
-        });
-        
-        setTimeout(() => { isLoading = false; }, 2000);
-    }
-    
-    function atualizarRealizadoEtapas() {
-        obraEtapas.forEach(etapa => {
-            etapa.realizado = obraGastos.filter(g => g.etapa === etapa.nome && g.status === 'aprovado').reduce((s,g) => s + g.valor, 0);
-        });
-    }
-    
-    async function registrarAuditoria(acao, entidade, idRegistro, detalhes) {
-        const log = { id: Date.now(), timestamp: new Date().toISOString(), acao, entidade, idRegistro, usuario: currentUser?.email || "sistema", role: currentUser?.role, detalhes };
-        await auditLogRef.child(log.id.toString()).set(log);
-    }
-    
-    // Funções de Renderização
-    function renderCategorias() {
-        const container = document.getElementById("listaCategoriasContainer");
-        if(!container) return;
-        container.innerHTML = "";
-        categorias.forEach(cat => {
-            const span = document.createElement("span");
-            span.className = "categoria-item";
-            span.innerHTML = `<i class="fas fa-tag"></i> ${cat} ${currentUser?.role === 'tesoureiro' ? `<i class="fas fa-trash-alt delete-cat" data-cat="${cat}" style="cursor:pointer; margin-left:8px; color:#b91c1c;"></i>` : ''}`;
-            container.appendChild(span);
-        });
-        if(currentUser?.role === 'tesoureiro') {
-            document.querySelectorAll(".delete-cat").forEach(el => {
-                el.addEventListener("click", async (e) => {
-                    const cat = el.getAttribute("data-cat");
-                    if(confirm(`Remover categoria "${cat}"?`)) {
-                        categorias = categorias.filter(c => c !== cat);
-                        await categoriasRef.set(categorias);
-                        await registrarAuditoria("DELETE", "categoria", cat, `Categoria removida: ${cat}`);
-                    }
-                });
-            });
+            return doacoesObra;
+        } catch(error) {
+            console.error("❌ Erro:", error);
+            return [];
         }
     }
     
-    function renderCategoriasSelect() {
-        const select = document.getElementById("categoriaSelect");
-        if(select) {
-            select.innerHTML = "";
-            categorias.forEach(c => {
-                const op = document.createElement("option");
-                op.value = c;
-                op.textContent = c;
-                select.appendChild(op);
-            });
-        }
-    }
-    
-    function renderTabelaDespesas() {
-        let dados = [...despesas];
-        if(filtroListaMesAtual) dados = dados.filter(d => d.mesAno === filtroListaMesAtual);
-        if(apenasPendentes) dados = dados.filter(d => d.status === 'pendente');
-        dados.sort((a,b) => b.mesAno.localeCompare(a.mesAno));
+    // FUNÇÃO CORRIGIDA - Esta é a mais importante!
+    function renderTabelaDoacoes() {
+        let doacoesFiltradas = filtroDoacaoObraMes ? doacoesObra.filter(d => d.data?.substring(0,7) === filtroDoacaoObraMes) : doacoesObra;
+        doacoesFiltradas.sort((a,b) => b.id - a.id);
         
-        const tbody = document.getElementById("tbodyDespesas");
-        if(!tbody) return;
-        if(dados.length === 0) {
-            tbody.innerHTML = "<td><td colspan='8' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma despesa registrada</td></tr>";
+        const tbody = document.getElementById("tbodyDoacoesObra");
+        if(!tbody) {
+            console.log("❌ Elemento tbodyDoacoesObra não encontrado");
             return;
         }
+        
+        if(doacoesFiltradas.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma doação registrada</td></tr>";
+            return;
+        }
+        
         tbody.innerHTML = "";
-        dados.forEach(exp => {
-            const statusClass = exp.status === 'pendente' ? 'status-pendente' : 'status-aprovado';
-            const statusText = exp.status === 'pendente' ? '⏳ Pendente' : '✅ Aprovado';
-            const compHtml = exp.comprovanteBase64 ? `<i class="fas fa-paperclip comprovante-link" data-id="${exp.id}" style="cursor:pointer; color:#2c7a4a;"></i>` : '—';
+        doacoesFiltradas.forEach(d => {
             let acoes = "";
-            if(currentUser?.role === 'anciao' && exp.status === 'pendente') {
-                acoes = `<i class="fas fa-check-circle approve-expense" data-id="${exp.id}" style="color:#2c7a4a; font-size:1.2rem; cursor:pointer;"></i>`;
-            }
             if(currentUser?.role === 'tesoureiro') {
-                acoes = `<i class="fas fa-trash-alt delete-expense" data-id="${exp.id}" style="color:#b91c1c; cursor:pointer;"></i>`;
+                acoes = `<button class="btn-delete delete-doacao" data-id="${d.id}" style="background:#b91c1c; color:white; border:none; padding:4px 8px; border-radius:20px; cursor:pointer;"><i class="fas fa-trash"></i> Excluir</button>`;
             }
-            if(currentUser?.role === 'auditor') {
-                acoes = `<i class="fas fa-eye" style="color:#6c757d;"></i>`;
-            }
+            
+            // CORREÇÃO: Cada coluna em tags <td> separadas
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td>${exp.mesAno}</td>
-                <td>${escapeHtml(exp.descricao)}</td>
-                <td>${escapeHtml(exp.categoria)}</td>
-                <td><strong>R$ ${exp.valor.toFixed(2).replace('.',',')}</strong></td>
-                <td><span class="${statusClass}">${statusText}</span>${exp.aprovadoPor ? `<br><small>por ${exp.aprovadoPor}</small>` : ''}</td>
-                <td>${escapeHtml(exp.obs || '-')}</td>
-                <td>${compHtml}</td>
+                <td>${d.data || '-'}</td>
+                <td>${escapeHtml(d.doador || 'Anônimo')}</td>
+                <td>${escapeHtml(d.descricao || 'Doação para obra')}</td>
+                <td><strong style="color:#2c7a4a;">R$ ${(d.valor || 0).toFixed(2).replace('.',',')}</strong></td>
+                <td>${d.registradoPor || '-'}</td>
                 <td>${acoes}</td>
             `;
             tbody.appendChild(tr);
         });
         
-        document.querySelectorAll(".delete-expense").forEach(btn => btn.addEventListener("click", async (e) => {
-            const id = parseInt(btn.getAttribute("data-id"));
-            if(confirm("Excluir esta despesa?")) {
-                await despesasRef.child(id.toString()).remove();
-                await registrarAuditoria("DELETE", "despesa", id, "Despesa removida");
-            }
-        }));
-        
-        document.querySelectorAll(".approve-expense").forEach(btn => btn.addEventListener("click", async (e) => {
-            const id = parseInt(btn.getAttribute("data-id"));
-            const despesa = despesas.find(d => d.id === id);
-            if(despesa && despesa.status === 'pendente') {
-                despesa.status = 'aprovado';
-                despesa.aprovadoPor = currentUser.nome;
-                await despesasRef.child(id.toString()).set(despesa);
-                await registrarAuditoria("UPDATE", "despesa", id, `Despesa APROVADA: ${despesa.descricao}`);
-                alert(`✅ Despesa aprovada!`);
-            }
-        }));
-        
-        document.querySelectorAll(".comprovante-link").forEach(el => {
-            el.addEventListener("click", (e) => {
-                const id = parseInt(el.getAttribute("data-id"));
-                const exp = despesas.find(d => d.id === id);
-                if(exp?.comprovanteBase64) {
-                    const win = window.open();
-                    win.document.write(`<html><body style="text-align:center; padding:20px;"><h3>${exp.descricao}</h3><img src="${exp.comprovanteBase64}" style="max-width:100%; border-radius:12px;"/><br><br><button onclick="window.close()" style="padding:10px 20px; background:#2c7a4a; color:white; border:none; border-radius:30px;">Fechar</button></body></html>`);
-                } else {
-                    alert("Nenhum comprovante anexado.");
+        // Eventos para excluir
+        document.querySelectorAll(".delete-doacao").forEach(btn => {
+            btn.removeEventListener('click', this);
+            btn.addEventListener("click", async (e) => {
+                const id = parseInt(btn.getAttribute("data-id"));
+                if(confirm("Excluir esta doação?")) {
+                    await database.ref(`obra/doacoes/${id}`).remove();
+                    await carregarDoacoes();
+                    alert("✅ Doação excluída!");
                 }
             });
         });
-        
-        document.getElementById("pendentesCount").innerHTML = despesas.filter(d => d.status === 'pendente').length;
-        const anciaoHint = document.getElementById("anciaoHint");
-        if(anciaoHint) anciaoHint.style.display = currentUser?.role === 'anciao' ? 'flex' : 'none';
-    }
-    
-    function renderTabelaEntradas() {
-        const tbody = document.getElementById("tbodyEntradas");
-        if(!tbody) return;
-        let dados = [...entradas].sort((a,b) => b.mes.localeCompare(a.mes));
-        if(dados.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma entrada registrada</td></tr>";
-            return;
-        }
-        tbody.innerHTML = "";
-        dados.forEach(entry => {
-            let acoes = "";
-            if(currentUser?.role === 'tesoureiro') {
-                acoes = `<i class="fas fa-trash-alt delete-entrada" data-id="${entry.id}" style="color:#b91c1c; cursor:pointer;"></i>`;
-            }
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${entry.mes}</td>
-                <td>${escapeHtml(entry.descricao)}</td>
-                <td><strong style="color:#2c7a4a;">R$ ${entry.valor.toFixed(2).replace('.',',')}</strong></td>
-                <td>${entry.registradoPor}</td>
-                <td>${entry.dataRegistro}</td>
-                <td>${acoes}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-        
-        document.querySelectorAll(".delete-entrada").forEach(btn => btn.addEventListener("click", async (e) => {
-            const id = parseInt(btn.getAttribute("data-id"));
-            if(confirm("Excluir esta entrada?")) {
-                await entradasRef.child(id.toString()).remove();
-                await registrarAuditoria("DELETE", "entrada", id, "Entrada removida");
-            }
-        }));
-    }
-    
-    function getEntradasPorMes(mes) { return entradas.filter(e => e.mes === mes).reduce((s,e) => s + e.valor, 0); }
-    function getDespesasPorMes(mes) { return despesas.filter(d => d.mesAno === mes && d.status === 'aprovado').reduce((s,d) => s + d.valor, 0); }
-    
-    function refreshDashboard() {
-        const mes = document.getElementById("filtroMesDashboard")?.value || new Date().toISOString().slice(0,7);
-        const totalEntradas = getEntradasPorMes(mes);
-        const totalDespesas = getDespesasPorMes(mes);
-        const saldo = totalEntradas - totalDespesas;
-        document.getElementById("totalEntradasMes").innerHTML = `R$ ${totalEntradas.toFixed(2).replace('.',',')}`;
-        document.getElementById("totalDespesasMes").innerHTML = `R$ ${totalDespesas.toFixed(2).replace('.',',')}`;
-        document.getElementById("saldoMes").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
-        if(saldo < 0) document.getElementById("saldoMes").style.color = "#b91c1c";
-        else document.getElementById("saldoMes").style.color = "#1e4a2f";
-        
-        if(graficoChart) graficoChart.destroy();
-        const ctx = document.getElementById("graficoComparativo").getContext("2d");
-        graficoChart = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Despesas Aprovadas'], datasets: [{ data: [totalEntradas, totalDespesas], backgroundColor: ['#2c7a4a', '#b91c1c'], borderRadius: 8 }] }, options: { responsive: true } });
     }
     
     function atualizarCardsObra() {
@@ -734,51 +550,90 @@
         document.getElementById("obraProgresso").innerHTML = `${progresso.toFixed(1)}%`;
     }
     
-    function renderTabelaDoacoesObra() {
-        let doacoesFiltradas = filtroDoacaoObraMes ? doacoesObra.filter(d => d.data?.substring(0,7) === filtroDoacaoObraMes) : doacoesObra;
-        doacoesFiltradas.sort((a,b) => b.id - a.id);
-        
-        const tbody = document.getElementById("tbodyDoacoesObra");
-        if(!tbody) return;
-        if(doacoesFiltradas.length === 0) {
-            tbody.innerHTML = "<td><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma doação registrada</td></tr>";
-            return;
+    async function registrarDoacao(data, doador, descricao, valor) {
+        if(currentUser?.role !== 'tesoureiro') {
+            alert("Apenas o Tesoureiro pode registrar doações.");
+            return false;
         }
-        tbody.innerHTML = "";
-        doacoesFiltradas.forEach(d => {
-            let acoes = "";
-            if(currentUser?.role === 'tesoureiro') {
-                acoes = `<button class="btn-delete delete-doacao" data-id="${d.id}" style="background:#b91c1c; color:white; border:none; padding:4px 8px; border-radius:20px; cursor:pointer;"><i class="fas fa-trash"></i></button>`;
-            }
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${d.data || '-'}</td>
-                <td>${escapeHtml(d.doador || 'Anônimo')}</td>
-                <td>${escapeHtml(d.descricao || 'Doação para obra')}</td>
-                <td><strong style="color:#2c7a4a;">R$ ${(d.valor || 0).toFixed(2).replace('.',',')}</strong></td>
-                <td>${d.registradoPor || '-'}</td>
-                <td>${acoes}</td>
-            `;
-            tbody.appendChild(tr);
+        
+        const novaDoacao = {
+            id: Date.now(),
+            data: data,
+            doador: doador || "Anônimo",
+            descricao: descricao || "Doação para obra",
+            valor: parseFloat(valor),
+            registradoPor: currentUser.nome,
+            dataRegistro: new Date().toISOString().split('T')[0]
+        };
+        
+        try {
+            await database.ref(`obra/doacoes/${novaDoacao.id}`).set(novaDoacao);
+            console.log("✅ Doação salva:", novaDoacao);
+            await carregarDoacoes(); // Recarrega imediatamente
+            alert(`✅ Doação de R$ ${valor.toFixed(2)} registrada com sucesso!`);
+            return true;
+        } catch(error) {
+            console.error("❌ Erro:", error);
+            alert("Erro ao salvar doação. Verifique sua conexão.");
+            return false;
+        }
+    }
+    
+    // Listeners em tempo real
+    function setupRealtimeListeners() {
+        database.ref('obra/doacoes').on('value', (snapshot) => {
+            const data = snapshot.val();
+            doacoesObra = data ? Object.values(data) : [];
+            console.log("📡 Listener: doações atualizadas", doacoesObra.length);
+            renderTabelaDoacoes();
+            atualizarCardsObra();
         });
         
-        document.querySelectorAll(".delete-doacao").forEach(btn => {
-            btn.addEventListener("click", async (e) => {
-                const id = parseInt(btn.getAttribute("data-id"));
-                if(confirm("Excluir esta doação?")) {
-                    await doacoesObraRef.child(id.toString()).remove();
-                    await registrarAuditoria("DELETE", "doacao_obra", id, "Doação removida");
-                    alert("✅ Doação excluída!");
-                }
-            });
+        database.ref('categorias').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if(data) categorias = data;
+            renderCategorias();
+            renderCategoriasSelect();
+        });
+        
+        database.ref('despesas').on('value', (snapshot) => {
+            const data = snapshot.val();
+            despesas = data ? Object.values(data) : [];
+            renderTabelaDespesas();
+            refreshDashboard();
+        });
+        
+        database.ref('entradas').on('value', (snapshot) => {
+            const data = snapshot.val();
+            entradas = data ? Object.values(data) : [];
+            renderTabelaEntradas();
+            refreshDashboard();
+        });
+        
+        database.ref('obra/etapas').on('value', (snapshot) => {
+            const data = snapshot.val();
+            obraEtapas = data ? Object.values(data) : [];
+            renderObra();
+        });
+        
+        database.ref('obra/gastos').on('value', (snapshot) => {
+            const data = snapshot.val();
+            obraGastos = data ? Object.values(data) : [];
+            atualizarRealizadoEtapas();
+            renderObra();
+        });
+    }
+    
+    function atualizarRealizadoEtapas() {
+        obraEtapas.forEach(etapa => {
+            etapa.realizado = obraGastos.filter(g => g.etapa === etapa.nome && g.status === 'aprovado').reduce((s,g) => s + g.valor, 0);
         });
     }
     
     function renderObra() {
         atualizarCardsObra();
-        renderTabelaDoacoesObra();
         
-        // Gráfico da obra
+        // Gráfico
         const labels = obraEtapas.map(e => e.nome);
         const orcamentos = obraEtapas.map(e => e.orcamento);
         const realizados = obraEtapas.map(e => e.realizado);
@@ -786,12 +641,9 @@
         if(labels.length > 0) {
             const ctx = document.getElementById("graficoObra").getContext("2d");
             graficoObraChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Orçamento', data: orcamentos, backgroundColor: '#2c7a4a', borderRadius: 8 }, { label: 'Realizado', data: realizados, backgroundColor: '#f4a261', borderRadius: 8 }] }, options: { responsive: true } });
-        } else {
-            const ctx = document.getElementById("graficoObra").getContext("2d");
-            graficoObraChart = new Chart(ctx, { type: 'bar', data: { labels: ['Nenhuma etapa'], datasets: [{ data: [0], backgroundColor: '#ccc' }] }, options: { responsive: true } });
         }
         
-        // Etapas container
+        // Etapas
         const etapasContainer = document.getElementById("etapasContainer");
         if(etapasContainer) {
             if(obraEtapas.length === 0) {
@@ -816,7 +668,7 @@
             selectFiltro.value = filtroEtapaObra;
         }
         
-        // Gastos da obra
+        // Gastos
         let gastosFiltrados = filtroEtapaObra ? obraGastos.filter(g => g.etapa === filtroEtapaObra) : obraGastos;
         gastosFiltrados.sort((a,b) => b.id - a.id);
         const tbodyGastos = document.getElementById("tbodyObra");
@@ -843,53 +695,140 @@
         }
     }
     
-    function renderAuditLog() {
-        const container = document.getElementById("auditLogContainer");
+    // Funções auxiliares (mantidas da versão anterior)
+    function renderCategorias() {
+        const container = document.getElementById("listaCategoriasContainer");
         if(!container) return;
-        if(auditLog.length === 0) { container.innerHTML = "Nenhuma ação registrada ainda."; return; }
-        let html = "<ul>";
-        auditLog.slice(0, 25).forEach(log => {
-            const icon = log.acao === 'CREATE' ? 'fa-plus-circle' : (log.acao === 'UPDATE' ? 'fa-edit' : 'fa-trash');
-            const cor = log.acao === 'CREATE' ? '#2c7a4a' : (log.acao === 'UPDATE' ? '#f4a261' : '#b91c1c');
-            html += `<li><i class="fas ${icon}" style="color:${cor};"></i> <strong>${log.acao}</strong> ${log.entidade} - ${log.detalhes}<br><small>${new Date(log.timestamp).toLocaleString()} • ${log.usuario}</small></li>`;
+        container.innerHTML = "";
+        categorias.forEach(cat => {
+            const span = document.createElement("span");
+            span.className = "categoria-item";
+            span.innerHTML = `<i class="fas fa-tag"></i> ${cat} ${currentUser?.role === 'tesoureiro' ? `<i class="fas fa-trash-alt delete-cat" data-cat="${cat}" style="cursor:pointer; margin-left:8px; color:#b91c1c;"></i>` : ''}`;
+            container.appendChild(span);
         });
-        html += "</ul>";
-        container.innerHTML = html;
     }
     
-    // Funções CRUD principais
+    function renderCategoriasSelect() {
+        const select = document.getElementById("categoriaSelect");
+        if(select) {
+            select.innerHTML = "";
+            categorias.forEach(c => {
+                const op = document.createElement("option");
+                op.value = c;
+                op.textContent = c;
+                select.appendChild(op);
+            });
+        }
+    }
+    
+    function renderTabelaDespesas() {
+        let dados = [...despesas];
+        if(filtroListaMesAtual) dados = dados.filter(d => d.mesAno === filtroListaMesAtual);
+        if(apenasPendentes) dados = dados.filter(d => d.status === 'pendente');
+        dados.sort((a,b) => b.mesAno.localeCompare(a.mesAno));
+        const tbody = document.getElementById("tbodyDespesas");
+        if(!tbody) return;
+        if(dados.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma despesa registrada</td></tr>";
+            return;
+        }
+        tbody.innerHTML = "";
+        dados.forEach(exp => {
+            const statusClass = exp.status === 'pendente' ? 'status-pendente' : 'status-aprovado';
+            const statusText = exp.status === 'pendente' ? '⏳ Pendente' : '✅ Aprovado';
+            const compHtml = exp.comprovanteBase64 ? `<i class="fas fa-paperclip comprovante-link" data-id="${exp.id}" style="cursor:pointer; color:#2c7a4a;"></i>` : '—';
+            let acoes = "";
+            if(currentUser?.role === 'anciao' && exp.status === 'pendente') acoes = `<i class="fas fa-check-circle approve-expense" data-id="${exp.id}" style="color:#2c7a4a; font-size:1.2rem; cursor:pointer;"></i>`;
+            if(currentUser?.role === 'tesoureiro') acoes = `<i class="fas fa-trash-alt delete-expense" data-id="${exp.id}" style="color:#b91c1c; cursor:pointer;"></i>`;
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${exp.mesAno}</td>
+                <td>${escapeHtml(exp.descricao)}</td>
+                <td>${escapeHtml(exp.categoria)}</td>
+                <td><strong>R$ ${exp.valor.toFixed(2).replace('.',',')}</strong></td>
+                <td><span class="${statusClass}">${statusText}</span>${exp.aprovadoPor ? `<br><small>por ${exp.aprovadoPor}</small>` : ''}</td>
+                <td>${escapeHtml(exp.obs || '-')}</td>
+                <td>${compHtml}</td>
+                <td>${acoes}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        document.getElementById("pendentesCount").innerHTML = despesas.filter(d => d.status === 'pendente').length;
+        const anciaoHint = document.getElementById("anciaoHint");
+        if(anciaoHint) anciaoHint.style.display = currentUser?.role === 'anciao' ? 'flex' : 'none';
+    }
+    
+    function renderTabelaEntradas() {
+        const tbody = document.getElementById("tbodyEntradas");
+        if(!tbody) return;
+        let dados = [...entradas].sort((a,b) => b.mes.localeCompare(a.mes));
+        if(dados.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma entrada registrada</td></tr>";
+            return;
+        }
+        tbody.innerHTML = "";
+        dados.forEach(entry => {
+            let acoes = "";
+            if(currentUser?.role === 'tesoureiro') acoes = `<i class="fas fa-trash-alt delete-entrada" data-id="${entry.id}" style="color:#b91c1c; cursor:pointer;"></i>`;
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${entry.mes}</td>
+                <td>${escapeHtml(entry.descricao)}</td>
+                <td><strong style="color:#2c7a4a;">R$ ${entry.valor.toFixed(2).replace('.',',')}</strong></td>
+                <td>${entry.registradoPor}</td>
+                <td>${entry.dataRegistro}</td>
+                <td>${acoes}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    
+    function getEntradasPorMes(mes) { return entradas.filter(e => e.mes === mes).reduce((s,e) => s + e.valor, 0); }
+    function getDespesasPorMes(mes) { return despesas.filter(d => d.mesAno === mes && d.status === 'aprovado').reduce((s,d) => s + d.valor, 0); }
+    
+    function refreshDashboard() {
+        const mes = document.getElementById("filtroMesDashboard")?.value || new Date().toISOString().slice(0,7);
+        const totalEntradas = getEntradasPorMes(mes);
+        const totalDespesas = getDespesasPorMes(mes);
+        const saldo = totalEntradas - totalDespesas;
+        document.getElementById("totalEntradasMes").innerHTML = `R$ ${totalEntradas.toFixed(2).replace('.',',')}`;
+        document.getElementById("totalDespesasMes").innerHTML = `R$ ${totalDespesas.toFixed(2).replace('.',',')}`;
+        document.getElementById("saldoMes").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
+        if(saldo < 0) document.getElementById("saldoMes").style.color = "#b91c1c";
+        else document.getElementById("saldoMes").style.color = "#1e4a2f";
+        if(graficoChart) graficoChart.destroy();
+        const ctx = document.getElementById("graficoComparativo").getContext("2d");
+        graficoChart = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Despesas Aprovadas'], datasets: [{ data: [totalEntradas, totalDespesas], backgroundColor: ['#2c7a4a', '#b91c1c'], borderRadius: 8 }] }, options: { responsive: true } });
+    }
+    
+    function renderAuditLog() {
+        const container = document.getElementById("auditLogContainer");
+        if(container) container.innerHTML = "Sistema pronto. Clique em 'Recarregar' para forçar atualização das doações.";
+    }
+    
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+    
     async function adicionarDespesa(descricao, valor, categoria, mesAno, obs, comprovanteBase64 = null) {
         const nova = { id: Date.now(), descricao, valor, categoria, mesAno, status: 'pendente', obs: obs || "", comprovanteBase64, dataLancamento: new Date().toISOString(), aprovadoPor: null };
-        await despesasRef.child(nova.id.toString()).set(nova);
-        await registrarAuditoria("CREATE", "despesa", nova.id, `Despesa: ${descricao} - R$ ${valor}`);
+        await database.ref(`despesas/${nova.id}`).set(nova);
         alert("✅ Despesa lançada! Aguardando aprovação.");
     }
     
     async function registrarEntrada(mes, valor, descricao) {
         const nova = { id: Date.now(), mes, valor, descricao: descricao || `Entrada ${mes}`, registradoPor: currentUser.nome, dataRegistro: new Date().toISOString().split('T')[0] };
-        await entradasRef.child(nova.id.toString()).set(nova);
-        await registrarAuditoria("CREATE", "entrada", nova.id, `Entrada: ${mes} - R$ ${valor}`);
+        await database.ref(`entradas/${nova.id}`).set(nova);
         alert("✅ Entrada registrada!");
-    }
-    
-    async function registrarDoacao(data, doador, descricao, valor) {
-        const nova = { id: Date.now(), data, doador: doador || "Anônimo", descricao: descricao || "Doação para obra", valor: parseFloat(valor), registradoPor: currentUser.nome, dataRegistro: new Date().toISOString().split('T')[0] };
-        await doacoesObraRef.child(nova.id.toString()).set(nova);
-        await registrarAuditoria("CREATE", "doacao_obra", nova.id, `Doação: ${doador} - R$ ${valor}`);
-        alert(`✅ Doação de R$ ${valor} registrada!`);
     }
     
     async function adicionarEtapa(nome, orcamento) {
         const nova = { id: Date.now(), nome, orcamento: parseFloat(orcamento), realizado: 0 };
-        await obraEtapasRef.child(nova.id.toString()).set(nova);
-        await registrarAuditoria("CREATE", "obra_etapa", nova.id, `Etapa: ${nome} - R$ ${orcamento}`);
+        await database.ref(`obra/etapas/${nova.id}`).set(nova);
         alert("✅ Etapa adicionada!");
     }
     
     async function registrarGasto(data, etapa, descricao, fornecedor, valor) {
         const novo = { id: Date.now(), data, etapa, descricao, fornecedor, valor: parseFloat(valor), status: "aprovado" };
-        await obraGastosRef.child(novo.id.toString()).set(novo);
-        await registrarAuditoria("CREATE", "obra_gasto", novo.id, `Gasto: ${descricao} - R$ ${valor}`);
+        await database.ref(`obra/gastos/${novo.id}`).set(novo);
         alert("✅ Gasto registrado!");
     }
     
@@ -902,53 +841,17 @@
         const novoFornecedor = prompt("Novo fornecedor:", gasto.fornecedor);
         const novoValor = prompt("Novo valor:", gasto.valor);
         if(novaData && novaEtapa && novaDescricao && novoFornecedor && novoValor) {
-            await obraGastosRef.child(id.toString()).update({ data: novaData, etapa: novaEtapa, descricao: novaDescricao, fornecedor: novoFornecedor, valor: parseFloat(novoValor) });
-            await registrarAuditoria("UPDATE", "obra_gasto", id, "Gasto atualizado");
+            await database.ref(`obra/gastos/${id}`).update({ data: novaData, etapa: novaEtapa, descricao: novaDescricao, fornecedor: novoFornecedor, valor: parseFloat(novoValor) });
             alert("✅ Gasto atualizado!");
         }
     };
     
     window.excluirGasto = async (id) => {
         if(confirm("Excluir este gasto?")) {
-            await obraGastosRef.child(id.toString()).remove();
-            await registrarAuditoria("DELETE", "obra_gasto", id, "Gasto removido");
+            await database.ref(`obra/gastos/${id}`).remove();
             alert("✅ Gasto excluído!");
         }
     };
-    
-    async function recarregarDoacoes() {
-        const snapshot = await doacoesObraRef.once('value');
-        const data = snapshot.val();
-        doacoesObra = data ? Object.values(data) : [];
-        atualizarCardsObra();
-        renderTabelaDoacoesObra();
-        alert(`✅ ${doacoesObra.length} doações carregadas!`);
-    }
-    
-    async function resetarSistema() {
-        if(confirm("⚠️ ATENÇÃO! Isso irá apagar TODOS os dados do sistema. Tem certeza?")) {
-            await categoriasRef.set(["Culto", "Manutenção", "Música", "Eventos", "Material de Limpeza", "Comunicação", "Educação Cristã"]);
-            await despesasRef.set({});
-            await entradasRef.set({});
-            await auditLogRef.set({});
-            await obraEtapasRef.set({});
-            await obraGastosRef.set({});
-            await doacoesObraRef.set({});
-            categorias = ["Culto", "Manutenção", "Música", "Eventos", "Material de Limpeza", "Comunicação", "Educação Cristã"];
-            despesas = [];
-            entradas = [];
-            auditLog = [];
-            obraEtapas = [];
-            obraGastos = [];
-            doacoesObra = [];
-            await registrarAuditoria("RESET", "sistema", 0, "Sistema resetado");
-            alert("✅ Sistema resetado!");
-            location.reload();
-        }
-    }
-    
-    // Funções auxiliares
-    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
     
     function login(email, senha) {
         if(CREDENCIAIS_REAIS[email] && CREDENCIAIS_REAIS[email].senha === senha) {
@@ -996,7 +899,16 @@
         alert("✅ Gastos exportados!");
     }
     
-    // Event Listeners
+    async function resetarSistema() {
+        const masterPass = prompt("Digite a senha master para resetar o sistema:");
+        if(masterPass !== MASTER_PASSWORD) { alert("❌ Senha master incorreta!"); return; }
+        if(confirm("⚠️ ATENÇÃO! Isso irá apagar TODOS os dados. Tem certeza?")) {
+            await database.ref().set({});
+            alert("✅ Sistema resetado!");
+            location.reload();
+        }
+    }
+    
     function setupEventListeners() {
         document.querySelectorAll(".tab-btn").forEach(btn => {
             btn.addEventListener("click", () => {
@@ -1004,13 +916,14 @@
                 document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
                 btn.classList.add("active");
                 document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
-                if(btn.dataset.tab === "obra") renderObra();
+                if(btn.dataset.tab === "obra") carregarDoacoes();
             });
         });
         
-        document.getElementById("btnRecarregarDoacoes")?.addEventListener("click", recarregarDoacoes);
-        document.getElementById("btnExportarDoacoesObra")?.addEventListener("click", exportarDoacoes);
-        document.getElementById("btnExportarObra")?.addEventListener("click", exportarGastosObra);
+        document.getElementById("btnRecarregarDoacoes")?.addEventListener("click", async () => {
+            await carregarDoacoes();
+            alert(`✅ ${doacoesObra.length} doações carregadas!`);
+        });
         
         document.getElementById("btnRegistrarDoacaoObra")?.addEventListener("click", async () => {
             if(currentUser?.role !== 'tesoureiro') return alert("Apenas o Tesoureiro pode registrar doações.");
@@ -1064,8 +977,7 @@
             if(nome && currentUser?.role === 'tesoureiro') {
                 if(!categorias.includes(nome)) {
                     categorias.push(nome);
-                    await categoriasRef.set(categorias);
-                    await registrarAuditoria("CREATE", "categoria", nome, `Nova categoria: ${nome}`);
+                    await database.ref('categorias').set(categorias);
                     document.getElementById("novaCategoria").value = "";
                     alert(`✅ Categoria "${nome}" adicionada!`);
                 } else alert("⚠️ Categoria já existe!");
@@ -1100,8 +1012,8 @@
         document.getElementById("filtrarListaBtn")?.addEventListener("click", () => { filtroListaMesAtual = document.getElementById("filtroListaMes").value; apenasPendentes = false; renderTabelaDespesas(); });
         document.getElementById("limparFiltroLista")?.addEventListener("click", () => { filtroListaMesAtual = null; apenasPendentes = false; renderTabelaDespesas(); });
         document.getElementById("mostrarPendentesBtn")?.addEventListener("click", () => { apenasPendentes = true; renderTabelaDespesas(); });
-        document.getElementById("btnFiltrarDoacaoObra")?.addEventListener("click", () => { filtroDoacaoObraMes = document.getElementById("filtroDoacaoObraMes").value; renderTabelaDoacoesObra(); });
-        document.getElementById("btnLimparFiltroDoacaoObra")?.addEventListener("click", () => { filtroDoacaoObraMes = ""; renderTabelaDoacoesObra(); });
+        document.getElementById("btnFiltrarDoacaoObra")?.addEventListener("click", () => { filtroDoacaoObraMes = document.getElementById("filtroDoacaoObraMes").value; renderTabelaDoacoes(); });
+        document.getElementById("btnLimparFiltroDoacaoObra")?.addEventListener("click", () => { filtroDoacaoObraMes = ""; renderTabelaDoacoes(); });
         document.getElementById("btnFiltrarObra")?.addEventListener("click", () => { filtroEtapaObra = document.getElementById("filtroEtapaObra").value; renderObra(); });
         document.getElementById("btnLimparFiltroObra")?.addEventListener("click", () => { filtroEtapaObra = ""; renderObra(); });
         document.getElementById("btnRelatorioCompleto")?.addEventListener("click", () => {
@@ -1121,11 +1033,11 @@
             alert("✅ Dados exportados!");
         });
         
-        document.getElementById("btnResetSystem")?.addEventListener("click", () => {
-            const masterPass = prompt("Digite a senha master para resetar o sistema:");
-            if(masterPass === MASTER_PASSWORD) resetarSistema();
-            else alert("❌ Senha master incorreta!");
-        });
+        document.getElementById("btnResetSystem")?.addEventListener("click", resetarSistema);
+        document.getElementById("btnFiltrarObra")?.addEventListener("click", () => { filtroEtapaObra = document.getElementById("filtroEtapaObra").value; renderObra(); });
+        document.getElementById("btnLimparFiltroObra")?.addEventListener("click", () => { filtroEtapaObra = ""; renderObra(); });
+        document.getElementById("btnExportarObra")?.addEventListener("click", exportarGastosObra);
+        document.getElementById("btnExportarDoacoesObra")?.addEventListener("click", exportarDoacoes);
         
         document.getElementById("btnLogin")?.addEventListener("click", () => {
             const email = document.getElementById("loginEmail").value.trim();
@@ -1142,6 +1054,7 @@
                 document.getElementById("entradaMes").value = now;
                 document.getElementById("obraData").value = new Date().toISOString().slice(0,10);
                 document.getElementById("doacaoObraData").value = new Date().toISOString().slice(0,10);
+                carregarDoacoes();
                 refreshDashboard();
                 renderObra();
             } else {
@@ -1151,7 +1064,6 @@
         
         document.getElementById("btnRevelarSenhas")?.addEventListener("click", () => { document.getElementById("masterPasswordArea").style.display = "flex"; document.getElementById("masterPassword").focus(); });
         document.getElementById("btnConfirmarMaster")?.addEventListener("click", () => revelarSenhas(document.getElementById("masterPassword").value));
-        document.getElementById("masterPassword")?.addEventListener("keypress", (e) => { if(e.key === 'Enter') revelarSenhas(document.getElementById("masterPassword").value); });
         document.getElementById("btnLogout")?.addEventListener("click", logout);
     }
     
@@ -1170,12 +1082,12 @@
             document.getElementById("entradaMes").value = now;
             document.getElementById("obraData").value = new Date().toISOString().slice(0,10);
             document.getElementById("doacaoObraData").value = new Date().toISOString().slice(0,10);
+            carregarDoacoes();
             refreshDashboard();
             renderObra();
         }
     }
     
-    database.ref('.info/connected').on('value', (snap) => updateSyncIndicator(snap.val()));
     setupRealtimeListeners();
     setupEventListeners();
     checkLoggedUser();
