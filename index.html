@@ -4,14 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>IASD COHAB - Sistema de Tesouraria + Controle de Obras</title>
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- SheetJS para exportar Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -23,7 +19,6 @@
         }
         .app-container { max-width: 1600px; margin: 0 auto; }
 
-        /* ==================== TELA DE LOGIN ==================== */
         .login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(135deg, #0e3a22, #1a5c3a);
@@ -66,7 +61,6 @@
         .passwords-container { display: none; margin-top: 15px; padding: 12px; background: #e8f5e9; border-radius: 16px; font-size: 0.7rem; }
         .passwords-container p { margin: 5px 0; font-family: monospace; }
         
-        /* Botão Reset */
         .reset-system-btn {
             background: #b91c1c;
             color: white;
@@ -88,7 +82,6 @@
             gap: 10px;
         }
 
-        /* ==================== HEADER ==================== */
         .church-header {
             background: linear-gradient(135deg, #1e4a2f, #0e3a22);
             color: white;
@@ -122,7 +115,6 @@
         .logout-btn:hover { background: #c82333; transform: scale(0.97); }
         .status-online { font-size: 0.65rem; background: #2c7a4a; padding: 4px 10px; border-radius: 30px; margin-left: 8px; }
 
-        /* ==================== CARDS ==================== */
         .dashboard-cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -147,7 +139,6 @@
         .card-value-saldo { color: #1e4a2f; }
         .card-badge { font-size: 0.7rem; color: #2c7a4a; margin-top: 10px; display: flex; align-items: center; gap: 6px; }
 
-        /* ==================== PAINÉIS ==================== */
         .two-columns { display: grid; grid-template-columns: 1fr 1.2fr; gap: 28px; margin-bottom: 32px; }
         @media (max-width: 900px) { .two-columns { grid-template-columns: 1fr; } }
         .panel { background: white; border-radius: 28px; padding: 1.8rem; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05); transition: all 0.3s; border: 1px solid rgba(0,0,0,0.03); }
@@ -155,7 +146,6 @@
         .panel h3 { margin-bottom: 1.5rem; font-weight: 700; color: #1e4a2f; display: flex; align-items: center; gap: 10px; font-size: 1.3rem; }
         .panel h3 i { color: #2c7a4a; font-size: 1.3rem; }
 
-        /* ==================== FORMULÁRIOS ==================== */
         .form-group { margin-bottom: 18px; }
         label { font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; display: block; color: #2c3e50; }
         input, select, textarea { width: 100%; padding: 12px 16px; border-radius: 20px; border: 2px solid #e2e8f0; font-size: 0.9rem; transition: all 0.3s; background: #fefefe; }
@@ -168,7 +158,6 @@
         .btn-excel { background: linear-gradient(135deg, #1e7e34, #28a745); color: white; }
         .entrada-form { background: linear-gradient(135deg, #e8f5e9, #c8e6d9); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
 
-        /* ==================== TABELA ==================== */
         .table-wrapper { overflow-x: auto; border-radius: 20px; }
         table { width: 100%; border-collapse: collapse; }
         th { background: #f1f5f9; padding: 14px 12px; font-weight: 700; font-size: 0.85rem; color: #2c3e50; position: sticky; top: 0; }
@@ -219,7 +208,6 @@
         .tab-content.active { display: block; animation: fadeIn 0.4s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        /* Indicador de conexão */
         .connection-status {
             position: fixed;
             bottom: 20px;
@@ -289,7 +277,7 @@
             <button class="tab-btn" data-tab="obra"><i class="fas fa-hard-hat"></i> Construção / Obra</button>
         </div>
 
-        <!-- ==================== ABA TESOURARIA ==================== -->
+        <!-- ABA TESOURARIA -->
         <div id="tab-tesouraria" class="tab-content active">
             <div class="dashboard-cards">
                 <div class="card"><div class="card-title"><i class="fas fa-arrow-down"></i> Entradas (Mês)</div><div class="card-value card-value-entrada" id="totalEntradasMes">R$ 0,00</div><div class="card-badge"><i class="fas fa-hand-holding-heart"></i> Dízimos + Ofertas</div></div>
@@ -342,7 +330,7 @@
             <div class="panel"><h3><i class="fas fa-history"></i> Trilha de Auditoria</h3><div id="auditLogContainer" class="audit-log">Aguardando dados...</div></div>
         </div>
 
-        <!-- ==================== ABA CONSTRUÇÃO/OBRA ==================== -->
+        <!-- ABA CONSTRUÇÃO/OBRA -->
         <div id="tab-obra" class="tab-content">
             <div class="dashboard-cards">
                 <div class="card"><div class="card-title"><i class="fas fa-hand-holding-heart"></i> Total Doações</div><div class="card-value card-value-entrada" id="obraTotalDoacoes">R$ 0,00</div><div class="card-badge"><i class="fas fa-chart-line"></i> Para a obra</div></div>
@@ -394,7 +382,9 @@
                 </div>
                 <div class="table-wrapper">
                     <table id="tabelaDoacoesObra">
-                        <thead><tr><th>Data</th><th>Doador</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Ações</th></tr></thead>
+                        <thead>
+                            <tr><th>Data</th><th>Doador</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Ações</th>
+                        </thead>
                         <tbody id="tbodyDoacoesObra"></tbody>
                     </table>
                 </div>
@@ -439,7 +429,7 @@
 </div>
 
 <script>
-    // ==================== CONFIGURAÇÃO DO FIREBASE ====================
+    // Configuração do Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyAogWId8qBXRCSc6DET2t-Q355AxUFbGIY",
         authDomain: "iasd-cohab-tesouraria.firebaseapp.com",
@@ -450,11 +440,9 @@
         appId: "1:1027222095852:web:b7aef4930faaf6e7fce2c9"
     };
     
-    // Inicializar Firebase
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
     
-    // Referências do banco de dados
     const dbRefs = {
         categorias: database.ref('categorias'),
         despesas: database.ref('despesas'),
@@ -465,7 +453,6 @@
         doacoesObra: database.ref('obra/doacoes')
     };
     
-    // ==================== VARIÁVEIS GLOBAIS ====================
     const MASTER_PASSWORD = "IASD@COHAB2025";
     const SENHAS_REAIS = { "tesoureiro": "Tes@2025", "anciao": "Anc@2025", "auditor": "Aud@2025" };
     const CREDENCIAIS_REAIS = {
@@ -483,7 +470,6 @@
     let filtroListaMesAtual = null;
     let apenasPendentes = false;
     
-    // Dados da Obra
     let obraEtapas = [];
     let obraGastos = [];
     let doacoesObra = [];
@@ -491,10 +477,8 @@
     let filtroEtapaObra = "";
     let filtroDoacaoObraMes = "";
     
-    // Flag para evitar loops
     let isLoading = true;
     
-    // ==================== FUNÇÕES DE SINCRONIZAÇÃO ====================
     function updateSyncIndicator(connected = true) {
         const ind = document.getElementById("syncIndicator");
         const statusDiv = document.getElementById("connectionStatus");
@@ -508,110 +492,58 @@
         }
     }
     
-    // Escutar mudanças em tempo real
     function setupRealtimeListeners() {
-        // Categorias
         dbRefs.categorias.on('value', (snapshot) => {
             const data = snapshot.val();
-            if(data) {
-                categorias = data;
-            } else if(!data && isLoading) {
-                dbRefs.categorias.set(categorias);
-            }
+            if(data) categorias = data;
+            else if(!data && isLoading) dbRefs.categorias.set(categorias);
             renderCategorias();
             renderCategoriasSelect();
         });
         
-        // Despesas
         dbRefs.despesas.on('value', (snapshot) => {
             const data = snapshot.val();
-            if(data) {
-                despesas = Object.values(data);
-            } else {
-                despesas = [];
-            }
+            despesas = data ? Object.values(data) : [];
             renderTabelaDespesas();
             refreshDashboard();
         });
         
-        // Entradas
         dbRefs.entradas.on('value', (snapshot) => {
             const data = snapshot.val();
-            if(data) {
-                entradas = Object.values(data);
-            } else {
-                entradas = [];
-            }
+            entradas = data ? Object.values(data) : [];
             renderTabelaEntradas();
             refreshDashboard();
         });
         
-        // Auditoria
         dbRefs.auditLog.on('value', (snapshot) => {
             const data = snapshot.val();
-            if(data) {
-                auditLog = Object.values(data);
-            } else {
-                auditLog = [];
-            }
+            auditLog = data ? Object.values(data) : [];
             renderAuditLog();
         });
         
-        // Etapas da Obra
         dbRefs.obraEtapas.on('value', (snapshot) => {
             const data = snapshot.val();
-            if(data) {
-                obraEtapas = Object.values(data);
-            } else {
-                obraEtapas = [];
-            }
+            obraEtapas = data ? Object.values(data) : [];
             atualizarRealizadoEtapas();
             renderObra();
         });
         
-        // Gastos da Obra
         dbRefs.obraGastos.on('value', (snapshot) => {
             const data = snapshot.val();
-            if(data) {
-                obraGastos = Object.values(data);
-            } else {
-                obraGastos = [];
-            }
+            obraGastos = data ? Object.values(data) : [];
             atualizarRealizadoEtapas();
             renderObra();
         });
         
-        // Doações da Obra - CORRIGIDO: força renderização
         dbRefs.doacoesObra.on('value', (snapshot) => {
             const data = snapshot.val();
-            console.log("Doações recebidas do Firebase:", data); // Log para debug
-            if(data) {
-                doacoesObra = Object.values(data);
-            } else {
-                doacoesObra = [];
-            }
-            // Forçar atualização da interface da obra
+            doacoesObra = data ? Object.values(data) : [];
+            console.log("Doações carregadas:", doacoesObra);
             atualizarRealizadoEtapas();
             renderObra();
-            // Atualizar também os cards
-            atualizarCardsObra();
         });
         
-        setTimeout(() => {
-            isLoading = false;
-        }, 2000);
-    }
-    
-    function atualizarCardsObra() {
-        let totalDoacoes = getTotalDoacoesObra();
-        let totalGasto = getTotalRealizado();
-        let saldo = totalDoacoes - totalGasto;
-        let progresso = getProgresso();
-        
-        document.getElementById("obraTotalDoacoes").innerHTML = `R$ ${totalDoacoes.toFixed(2).replace('.',',')}`;
-        document.getElementById("obraTotalGasto").innerHTML = `R$ ${totalGasto.toFixed(2).replace('.',',')}`;
-        document.getElementById("obraSaldo").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
-        document.getElementById("obraProgresso").innerHTML = `${progresso.toFixed(1)}%`;
+        setTimeout(() => { isLoading = false; }, 2000);
     }
     
     function atualizarRealizadoEtapas() {
@@ -620,92 +552,11 @@
         });
     }
     
-    // ==================== FUNÇÕES DE CRUD NO FIREBASE ====================
-    async function salvarCategorias() {
-        await dbRefs.categorias.set(categorias);
-        updateSyncIndicator(true);
-    }
-    
-    async function adicionarDespesa(descricao, valor, categoria, mesAno, obs, comprovanteBase64 = null) {
-        const nova = { 
-            id: Date.now(), 
-            descricao, 
-            valor, 
-            categoria, 
-            mesAno, 
-            status: 'pendente', 
-            obs: obs || "", 
-            comprovanteBase64, 
-            dataLancamento: new Date().toISOString(), 
-            aprovadoPor: null 
-        };
-        await dbRefs.despesas.child(nova.id.toString()).set(nova);
-        await registrarAuditoriaFirebase("CREATE", "despesa", nova.id, `Despesa: ${descricao} - R$ ${valor}`);
-        alert(`✅ Despesa lançada! Aguardando aprovação.`);
-    }
-    
-    async function aprovarDespesa(id) {
-        let despesa = despesas.find(d => d.id == id);
-        if(despesa && despesa.status === 'pendente') {
-            despesa.status = 'aprovado';
-            despesa.aprovadoPor = currentUser.nome;
-            await dbRefs.despesas.child(id.toString()).set(despesa);
-            await registrarAuditoriaFirebase("UPDATE", "despesa", id, `Despesa APROVADA: ${despesa.descricao}`);
-            alert(`✅ Despesa aprovada! Valor debitado: R$ ${despesa.valor.toFixed(2)}`);
-        }
-    }
-    
-    async function excluirDespesa(id) {
-        if(currentUser.role !== 'tesoureiro') { alert("Apenas o Tesoureiro pode excluir despesas."); return; }
-        let removida = despesas.find(d => d.id == id);
-        await dbRefs.despesas.child(id.toString()).remove();
-        await registrarAuditoriaFirebase("DELETE", "despesa", id, `Despesa REMOVIDA: ${removida?.descricao}`);
-    }
-    
-    async function adicionarCategoriaFirebase(nome) {
-        if(!categorias.includes(nome)) { 
-            categorias.push(nome); 
-            await salvarCategorias();
-            await registrarAuditoriaFirebase("CREATE", "categoria", nome, `Nova categoria: ${nome}`);
-            return true;
-        }
-        return false;
-    }
-    
-    async function removerCategoriaFirebase(nome) {
-        if(currentUser.role !== 'tesoureiro') return;
-        categorias = categorias.filter(c => c !== nome);
-        await salvarCategorias();
-        await registrarAuditoriaFirebase("DELETE", "categoria", nome, `Categoria removida: ${nome}`);
-    }
-    
-    async function registrarEntradaFirebase(mes, valor, descricao) {
-        let novaEntrada = { 
-            id: Date.now(), 
-            mes, 
-            valor, 
-            descricao: descricao || `Entrada ${mes}`, 
-            registradoPor: currentUser.nome, 
-            dataRegistro: new Date().toISOString().split('T')[0] 
-        };
-        await dbRefs.entradas.child(novaEntrada.id.toString()).set(novaEntrada);
-        await registrarAuditoriaFirebase("CREATE", "entrada", novaEntrada.id, `Entrada: ${mes} - R$ ${valor}`);
-        alert("✅ Entrada registrada!");
-    }
-    
-    async function excluirEntradaFirebase(id) {
-        if(currentUser.role !== 'tesoureiro') return alert("Apenas Tesoureiro pode excluir entradas.");
-        await dbRefs.entradas.child(id.toString()).remove();
-        await registrarAuditoriaFirebase("DELETE", "entrada", id, `Entrada removida`);
-    }
-    
     async function registrarAuditoriaFirebase(acao, entidade, idRegistro, detalhes) {
         let log = { 
             id: Date.now(), 
             timestamp: new Date().toISOString(), 
-            acao, 
-            entidade, 
-            idRegistro, 
+            acao, entidade, idRegistro, 
             usuario: currentUser?.email || "sistema", 
             role: currentUser?.role, 
             detalhes 
@@ -713,7 +564,6 @@
         await dbRefs.auditLog.child(log.id.toString()).set(log);
     }
     
-    // FUNÇÃO CORRIGIDA - Registrar Doação
     async function registrarDoacaoObraFirebase(data, doador, descricao, valor) {
         let novaDoacao = { 
             id: Date.now(), 
@@ -725,67 +575,16 @@
             dataRegistro: new Date().toISOString().split('T')[0] 
         };
         
-        console.log("Salvando doação:", novaDoacao); // Log para debug
-        
-        // Salvar no Firebase
+        console.log("Salvando doação:", novaDoacao);
         await dbRefs.doacoesObra.child(novaDoacao.id.toString()).set(novaDoacao);
-        
-        // Registrar na auditoria
         await registrarAuditoriaFirebase("CREATE", "doacao_obra", novaDoacao.id, `Doação obra: ${doador} - R$ ${valor}`);
-        
-        // Forçar atualização imediata
-        await forceRefreshDoacoes();
-        
         alert(`✅ Doação de R$ ${valor.toFixed(2)} registrada com sucesso!`);
-    }
-    
-    // Função para forçar atualização das doações
-    async function forceRefreshDoacoes() {
-        const snapshot = await dbRefs.doacoesObra.once('value');
-        const data = snapshot.val();
-        if(data) {
-            doacoesObra = Object.values(data);
-        } else {
-            doacoesObra = [];
-        }
-        atualizarRealizadoEtapas();
-        renderObra();
-        atualizarCardsObra();
     }
     
     async function excluirDoacaoObraFirebase(id) {
         if(currentUser.role !== 'tesoureiro') return alert("Apenas Tesoureiro pode excluir doações.");
         await dbRefs.doacoesObra.child(id.toString()).remove();
         await registrarAuditoriaFirebase("DELETE", "doacao_obra", id, `Doação removida`);
-        await forceRefreshDoacoes();
-    }
-    
-    async function adicionarEtapaFirebase(nome, orcamento) {
-        let novaEtapa = { id: Date.now(), nome: nome, orcamento: parseFloat(orcamento), realizado: 0 };
-        await dbRefs.obraEtapas.child(novaEtapa.id.toString()).set(novaEtapa);
-        await registrarAuditoriaFirebase("CREATE", "obra_etapa", novaEtapa.id, `Etapa criada: ${nome} - R$ ${orcamento}`);
-    }
-    
-    async function registrarGastoObraFirebase(data, etapa, descricao, fornecedor, valor) {
-        let novoGasto = { 
-            id: Date.now(), 
-            data: data, 
-            etapa: etapa, 
-            descricao: descricao, 
-            fornecedor: fornecedor, 
-            valor: parseFloat(valor), 
-            status: "aprovado" 
-        };
-        await dbRefs.obraGastos.child(novoGasto.id.toString()).set(novoGasto);
-        await registrarAuditoriaFirebase("CREATE", "obra_gasto", novoGasto.id, `Gasto obra: ${descricao} - R$ ${valor}`);
-        alert("✅ Gasto registrado!");
-    }
-    
-    async function excluirGastoObraFirebase(id) {
-        if(confirm("Tem certeza que deseja excluir este gasto?")) {
-            await dbRefs.obraGastos.child(id.toString()).remove();
-            await registrarAuditoriaFirebase("DELETE", "obra_gasto", id, `Gasto removido`);
-        }
     }
     
     async function resetarSistemaFirebase() {
@@ -812,7 +611,6 @@
         }
     }
     
-    // ==================== FUNÇÕES DE RENDERIZAÇÃO ====================
     function renderCategorias() {
         let container = document.getElementById("listaCategoriasContainer");
         if(!container) return;
@@ -826,7 +624,10 @@
             document.querySelectorAll(".delete-cat").forEach(el => { 
                 el.addEventListener("click", async (e) => { 
                     let cat = el.getAttribute("data-cat"); 
-                    if(confirm(`Remover categoria "${cat}"?`)) await removerCategoriaFirebase(cat); 
+                    if(confirm(`Remover categoria "${cat}"?`)) {
+                        categorias = categorias.filter(c => c !== cat);
+                        await dbRefs.categorias.set(categorias);
+                    }
                 }); 
             });
         }
@@ -854,7 +655,7 @@
         let tbody = document.getElementById("tbodyDespesas");
         if(!tbody) return;
         if(dados.length === 0) { 
-            tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma despesa registrada</td></td>";
+            tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma despesa registrada</td></tr>";
             return; 
         }
         tbody.innerHTML = "";
@@ -868,9 +669,6 @@
             }
             if(currentUser?.role === 'tesoureiro') {
                 acoes = `<i class="fas fa-trash-alt delete-expense" data-id="${exp.id}" style="color:#b91c1c; cursor:pointer;"></i>`;
-            }
-            if(currentUser?.role === 'auditor') {
-                acoes = `<i class="fas fa-eye" style="color:#6c757d;"></i>`;
             }
             let tr = document.createElement("tr");
             tr.innerHTML = `
@@ -901,7 +699,7 @@
         if(!tbody) return;
         let dados = [...entradas].sort((a,b)=>b.mes.localeCompare(a.mes));
         if(dados.length === 0) { 
-            tbody.innerHTML = "<td><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma entrada registrada</td></tr>";
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma entrada registrada</td></tr>";
             return; 
         }
         tbody.innerHTML = "";
@@ -919,7 +717,7 @@
             `;
             tbody.appendChild(tr);
         });
-        document.querySelectorAll(".delete-entrada").forEach(btn => btn.addEventListener("click", async (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Excluir?")) await excluirEntradaFirebase(id); }));
+        document.querySelectorAll(".delete-entrada").forEach(btn => btn.addEventListener("click", async (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Excluir?")) await dbRefs.entradas.child(id.toString()).remove(); }));
     }
     
     function getEntradasPorMes(mes) { return entradas.filter(e => e.mes === mes).reduce((s,e) => s + e.valor, 0); }
@@ -950,7 +748,6 @@
     }
     
     function renderObra() {
-        // Atualizar cards
         let totalDoacoes = getTotalDoacoesObra();
         let totalGasto = getTotalRealizado();
         let saldo = totalDoacoes - totalGasto;
@@ -961,7 +758,6 @@
         document.getElementById("obraSaldo").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
         document.getElementById("obraProgresso").innerHTML = `${progresso.toFixed(1)}%`;
         
-        // Gráfico
         let labels = obraEtapas.map(e => e.nome);
         let orcamentos = obraEtapas.map(e => e.orcamento);
         let realizados = obraEtapas.map(e => e.realizado);
@@ -974,7 +770,6 @@
             graficoObraChart = new Chart(ctx, { type: 'bar', data: { labels: ['Nenhuma etapa'], datasets: [{ data: [0], backgroundColor: '#ccc' }] }, options: { responsive: true } });
         }
         
-        // Etapas
         let etapasContainer = document.getElementById("etapasContainer");
         if(etapasContainer) {
             if(obraEtapas.length === 0) {
@@ -988,7 +783,6 @@
             }
         }
         
-        // Filtros etapas
         let selectEtapa = document.getElementById("obraEtapa");
         let selectFiltro = document.getElementById("filtroEtapaObra");
         if(selectEtapa) {
@@ -1007,28 +801,26 @@
             selectFiltro.value = filtroEtapaObra; 
         }
         
-        // Gastos da obra
         let gastosFiltrados = filtroEtapaObra ? obraGastos.filter(g => g.etapa === filtroEtapaObra) : obraGastos;
         gastosFiltrados.sort((a,b)=>b.id - a.id);
         let tbodyGastos = document.getElementById("tbodyObra");
         if(tbodyGastos) {
-            if(gastosFiltrados.length === 0) { tbodyGastos.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhum gasto registrado</td></tr>"; return; }
+            if(gastosFiltrados.length === 0) { tbodyGastos.innerHTML = "<td><td colspan='7' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhum gasto registrado</td></tr>"; return; }
             tbodyGastos.innerHTML = "";
             gastosFiltrados.forEach(g => {
-                let acoes = `<button class="btn-edit" onclick='editarGastoObraFirebase(${g.id})'><i class="fas fa-edit"></i></button><button class="btn-delete" onclick='excluirGastoObraFirebase(${g.id})'><i class="fas fa-trash"></i></button>`;
+                let acoes = `<button class="btn-edit" onclick='editarGastoObra(${g.id})'><i class="fas fa-edit"></i></button><button class="btn-delete" onclick='excluirGastoObra(${g.id})'><i class="fas fa-trash"></i></button>`;
                 let tr = document.createElement("tr");
                 tr.innerHTML = `<td>${g.data}</td><td>${g.etapa}</td><td>${g.descricao}</td><td>${g.fornecedor || '-'}</td><td><strong>R$ ${g.valor.toFixed(2).replace('.',',')}</strong></td><td><span class="status-aprovado">✅ Aprovado</span></td><td>${acoes}</td>`;
                 tbodyGastos.appendChild(tr);
             });
         }
         
-        // Doações da obra - CORRIGIDO: tabela de doações
         let doacoesFiltradas = filtroDoacaoObraMes ? doacoesObra.filter(d => d.data.substring(0,7) === filtroDoacaoObraMes) : doacoesObra;
         doacoesFiltradas.sort((a,b)=>b.id - a.id);
         let tbodyDoacoes = document.getElementById("tbodyDoacoesObra");
         if(tbodyDoacoes) {
             if(doacoesFiltradas.length === 0) { 
-                tbodyDoacoes.innerHTML = "<td><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma doação registrada</td></tr>";
+                tbodyDoacoes.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma doação registrada</td></td>";
                 return; 
             }
             tbodyDoacoes.innerHTML = "";
@@ -1037,8 +829,8 @@
                 let tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td>${d.data}</td>
-                    <td>${escapeHtml(d.doador)}</td></td>
-                    <td>${escapeHtml(d.descricao)}</td></td>
+                    <td>${escapeHtml(d.doador)}</td>
+                    <td>${escapeHtml(d.descricao)}</td>
                     <td><strong style="color:#2c7a4a;">R$ ${d.valor.toFixed(2).replace('.',',')}</strong></td>
                     <td>${d.registradoPor}</td>
                     <td>${acoes}</td>
@@ -1077,7 +869,83 @@
         return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); 
     }
     
-    // ==================== FUNÇÕES DE LOGIN ====================
+    async function adicionarDespesa(descricao, valor, categoria, mesAno, obs, comprovanteBase64 = null) {
+        const nova = { 
+            id: Date.now(), 
+            descricao, valor, categoria, mesAno, status: 'pendente', 
+            obs: obs || "", comprovanteBase64, dataLancamento: new Date().toISOString(), aprovadoPor: null 
+        };
+        await dbRefs.despesas.child(nova.id.toString()).set(nova);
+        await registrarAuditoriaFirebase("CREATE", "despesa", nova.id, `Despesa: ${descricao} - R$ ${valor}`);
+        alert(`✅ Despesa lançada! Aguardando aprovação.`);
+    }
+    
+    async function aprovarDespesa(id) {
+        let despesa = despesas.find(d => d.id == id);
+        if(despesa && despesa.status === 'pendente') {
+            despesa.status = 'aprovado';
+            despesa.aprovadoPor = currentUser.nome;
+            await dbRefs.despesas.child(id.toString()).set(despesa);
+            await registrarAuditoriaFirebase("UPDATE", "despesa", id, `Despesa APROVADA: ${despesa.descricao}`);
+            alert(`✅ Despesa aprovada! Valor debitado: R$ ${despesa.valor.toFixed(2)}`);
+        }
+    }
+    
+    async function excluirDespesa(id) {
+        if(currentUser.role !== 'tesoureiro') { alert("Apenas o Tesoureiro pode excluir despesas."); return; }
+        await dbRefs.despesas.child(id.toString()).remove();
+        await registrarAuditoriaFirebase("DELETE", "despesa", id, `Despesa removida`);
+    }
+    
+    async function registrarEntradaFirebase(mes, valor, descricao) {
+        let novaEntrada = { 
+            id: Date.now(), mes, valor, descricao: descricao || `Entrada ${mes}`, 
+            registradoPor: currentUser.nome, dataRegistro: new Date().toISOString().split('T')[0] 
+        };
+        await dbRefs.entradas.child(novaEntrada.id.toString()).set(novaEntrada);
+        await registrarAuditoriaFirebase("CREATE", "entrada", novaEntrada.id, `Entrada: ${mes} - R$ ${valor}`);
+        alert("✅ Entrada registrada!");
+    }
+    
+    async function adicionarEtapaFirebase(nome, orcamento) {
+        let novaEtapa = { id: Date.now(), nome: nome, orcamento: parseFloat(orcamento), realizado: 0 };
+        await dbRefs.obraEtapas.child(novaEtapa.id.toString()).set(novaEtapa);
+        await registrarAuditoriaFirebase("CREATE", "obra_etapa", novaEtapa.id, `Etapa criada: ${nome} - R$ ${orcamento}`);
+    }
+    
+    async function registrarGastoObraFirebase(data, etapa, descricao, fornecedor, valor) {
+        let novoGasto = { 
+            id: Date.now(), data, etapa, descricao, fornecedor, valor: parseFloat(valor), status: "aprovado" 
+        };
+        await dbRefs.obraGastos.child(novoGasto.id.toString()).set(novoGasto);
+        await registrarAuditoriaFirebase("CREATE", "obra_gasto", novoGasto.id, `Gasto obra: ${descricao} - R$ ${valor}`);
+        alert("✅ Gasto registrado!");
+    }
+    
+    async function excluirGastoObra(id) {
+        if(confirm("Tem certeza que deseja excluir este gasto?")) {
+            await dbRefs.obraGastos.child(id.toString()).remove();
+            await registrarAuditoriaFirebase("DELETE", "obra_gasto", id, `Gasto removido`);
+        }
+    }
+    
+    async function editarGastoObra(id) {
+        let gasto = obraGastos.find(g => g.id == id);
+        if(!gasto) return;
+        let novaData = prompt("Nova data:", gasto.data);
+        let novaEtapa = prompt("Nova etapa:", gasto.etapa);
+        let novaDescricao = prompt("Nova descrição:", gasto.descricao);
+        let novoFornecedor = prompt("Novo fornecedor:", gasto.fornecedor);
+        let novoValor = prompt("Novo valor:", gasto.valor);
+        if(novaData && novaEtapa && novaDescricao && novoFornecedor && novoValor) {
+            await dbRefs.obraGastos.child(id.toString()).update({
+                data: novaData, etapa: novaEtapa, descricao: novaDescricao, fornecedor: novoFornecedor, valor: parseFloat(novoValor)
+            });
+            await registrarAuditoriaFirebase("UPDATE", "obra_gasto", id, `Gasto atualizado`);
+            alert("✅ Gasto atualizado!");
+        }
+    }
+    
     function login(email, senha) {
         if(CREDENCIAIS_REAIS[email] && CREDENCIAIS_REAIS[email].senha === senha) {
             currentUser = { email: email, role: CREDENCIAIS_REAIS[email].role, nome: CREDENCIAIS_REAIS[email].nome };
@@ -1124,7 +992,6 @@
         alert("✅ Doações exportadas!");
     }
     
-    // ==================== EVENT LISTENERS ====================
     function setupEventListeners() {
         document.querySelectorAll(".tab-btn").forEach(btn => {
             btn.addEventListener("click", () => {
@@ -1168,40 +1035,23 @@
         document.getElementById("btnConfirmarMaster")?.addEventListener("click", () => revelarSenhas(document.getElementById("masterPassword").value));
         document.getElementById("masterPassword")?.addEventListener("keypress", (e) => { if(e.key === 'Enter') revelarSenhas(document.getElementById("masterPassword").value); });
         
-        // Registrar Doação para Obra - CORRIGIDO
         document.getElementById("btnRegistrarDoacaoObra")?.addEventListener("click", async () => {
             if(currentUser?.role !== 'tesoureiro') {
                 alert("Apenas o Tesoureiro pode registrar doações.");
                 return;
             }
-            
             let data = document.getElementById("doacaoObraData").value;
             let valor = parseFloat(document.getElementById("doacaoObraValor").value);
             let doador = document.getElementById("doacaoObraDoador").value.trim();
             let descricao = document.getElementById("doacaoObraDescricao").value.trim();
-            
-            if(!data) {
-                alert("Selecione a data da doação.");
-                return;
-            }
-            if(isNaN(valor) || valor <= 0) {
-                alert("Digite um valor válido para a doação.");
-                return;
-            }
-            if(!doador) {
-                doador = "Anônimo";
-            }
-            if(!descricao) {
-                descricao = "Doação para obra";
-            }
-            
+            if(!data) { alert("Selecione a data da doação."); return; }
+            if(isNaN(valor) || valor <= 0) { alert("Digite um valor válido para a doação."); return; }
+            if(!doador) doador = "Anônimo";
+            if(!descricao) descricao = "Doação para obra";
             await registrarDoacaoObraFirebase(data, doador, descricao, valor);
-            
-            // Limpar o formulário
             document.getElementById("doacaoObraValor").value = "";
             document.getElementById("doacaoObraDoador").value = "";
             document.getElementById("doacaoObraDescricao").value = "";
-            // Manter a data atual
             document.getElementById("doacaoObraData").value = new Date().toISOString().slice(0,10);
         });
         
@@ -1245,7 +1095,9 @@
         document.getElementById("btnAddCategoria")?.addEventListener("click", async () => { 
             let nome = document.getElementById("novaCategoria").value.trim(); 
             if(nome && currentUser?.role === 'tesoureiro') { 
-                if(await adicionarCategoriaFirebase(nome)) { 
+                if(!categorias.includes(nome)) { 
+                    categorias.push(nome); 
+                    await dbRefs.categorias.set(categorias);
                     document.getElementById("novaCategoria").value = ""; 
                     alert(`✅ Categoria "${nome}" adicionada!`); 
                 } else alert("⚠️ Categoria já existe!"); 
@@ -1305,31 +1157,8 @@
         document.getElementById("btnLogout")?.addEventListener("click", logout);
     }
     
-    // Expor funções globalmente para os botões de edição
-    window.editarGastoObraFirebase = async (id) => {
-        let gasto = obraGastos.find(g => g.id == id);
-        if(!gasto) return;
-        
-        let novaData = prompt("Nova data:", gasto.data);
-        let novaEtapa = prompt("Nova etapa:", gasto.etapa);
-        let novaDescricao = prompt("Nova descrição:", gasto.descricao);
-        let novoFornecedor = prompt("Novo fornecedor:", gasto.fornecedor);
-        let novoValor = prompt("Novo valor:", gasto.valor);
-        
-        if(novaData && novaEtapa && novaDescricao && novoFornecedor && novoValor) {
-            await dbRefs.obraGastos.child(id.toString()).update({
-                data: novaData,
-                etapa: novaEtapa,
-                descricao: novaDescricao,
-                fornecedor: novoFornecedor,
-                valor: parseFloat(novoValor)
-            });
-            await registrarAuditoriaFirebase("UPDATE", "obra_gasto", id, `Gasto atualizado`);
-            alert("✅ Gasto atualizado!");
-        }
-    };
-    
-    window.excluirGastoObraFirebase = excluirGastoObraFirebase;
+    window.editarGastoObra = editarGastoObra;
+    window.excluirGastoObra = excluirGastoObra;
     
     function checkLoggedUser() {
         let savedUser = sessionStorage.getItem("currentUser");
@@ -1350,12 +1179,10 @@
         }
     }
     
-    // Inicializar Firebase e listeners
     function initFirebase() {
         database.ref('.info/connected').on('value', (snap) => {
             updateSyncIndicator(snap.val());
         });
-        
         setupRealtimeListeners();
     }
     
