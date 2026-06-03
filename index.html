@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>IASD COHAB - Sistema de Tesouraria</title>
+    <title>IASD COHAB - Sistema de Tesouraria + Controle de Obras</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -313,15 +313,15 @@
                 <h3><i class="fas fa-list-ul"></i> Lançamentos</h3>
                 <div class="month-filter"><input type="month" id="filtroListaMes"><button id="filtrarListaBtn" class="btn-secondary">Filtrar</button><button id="limparFiltroLista" class="btn-secondary">Todas</button><button id="mostrarPendentesBtn" class="btn-secondary">Pendentes</button></div>
                 <div class="anciao-badge" id="anciaoHint" style="display: none;"><i class="fas fa-user-tie"></i><div><strong>Você é o Ancião</strong><br>Clique ✅ para aprovar</div></div>
-                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th></tr></thead><tbody id="tbodyDespesas"></tbody></table></div>
+                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th><tr></thead><tbody id="tbodyDespesas"></tbody></table></div>
             </div>
 
-            <div class="panel"><h3><i class="fas fa-chart-line"></i> Histórico de Entradas</h3><div class="table-wrapper"><table id="tabelaEntradas"><thead><tr><th>Mês</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Data</th><th>Ações</th></tr></thead><tbody id="tbodyEntradas"></tbody></tr></div></div>
+            <div class="panel"><h3><i class="fas fa-chart-line"></i> Histórico de Entradas</h3><div class="table-wrapper"><table id="tabelaEntradas"><thead><tr><th>Mês</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Data</th><th>Ações</th></tr></thead><tbody id="tbodyEntradas"></tbody></table></div></div>
 
             <div class="panel"><h3><i class="fas fa-history"></i> Trilha de Auditoria</h3><div id="auditLogContainer" class="audit-log">Aguardando dados...</div></div>
         </div>
 
-        <!-- ABA CONSTRUÇÃO/OBRA -->
+        <!-- ABA CONSTRUÇÃO/OBRA - CORRIGIDA PARA MOSTRAR DIFERENTE POR PERFIL -->
         <div id="tab-obra" class="tab-content">
             <div class="dashboard-cards">
                 <div class="card"><div class="card-title"><i class="fas fa-hand-holding-heart"></i> Total Doações</div><div class="card-value card-value-entrada" id="obraTotalDoacoes">R$ 0,00</div><div class="card-badge"><i class="fas fa-chart-line"></i> Para a obra</div></div>
@@ -339,7 +339,8 @@
                 <div class="panel">
                     <h3><i class="fas fa-tasks"></i> Etapas da Obra</h3>
                     <div id="etapasContainer"><div style="text-align:center; padding:20px; color:#6c757d;">Nenhuma etapa cadastrada. Clique em "+ Nova Etapa" para começar.</div></div>
-                    <div class="entrada-form" style="margin-top: 15px;">
+                    <!-- Só Tesoureiro pode adicionar etapas -->
+                    <div id="novaEtapaPanel" class="entrada-form" style="margin-top: 15px; display: none;">
                         <h4>➕ Nova Etapa</h4>
                         <div class="form-group"><label>Nome da Etapa</label><input type="text" id="novaEtapaNome" placeholder="Ex: Fundação"></div>
                         <div class="form-group"><label>Orçamento (R$)</label><input type="number" id="novaEtapaOrcamento" step="0.01"></div>
@@ -348,8 +349,8 @@
                 </div>
             </div>
 
-            <!-- Registrar Doação para a Obra -->
-            <div class="panel">
+            <!-- Registrar Doação para a Obra - Só Tesoureiro vê -->
+            <div id="registrarDoacaoPanel" class="panel" style="display: none;">
                 <h3><i class="fas fa-hand-holding-heart"></i> Registrar Doação para a Obra</h3>
                 <div class="entrada-form">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 15px;">
@@ -362,7 +363,7 @@
                 </div>
             </div>
 
-            <!-- Histórico de Doações da Obra -->
+            <!-- Histórico de Doações da Obra - Todos veem -->
             <div class="panel">
                 <h3><i class="fas fa-list-ul"></i> Histórico de Doações para a Obra</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
@@ -370,7 +371,7 @@
                     <button id="btnFiltrarDoacaoObra" class="btn-secondary">Filtrar por Mês</button>
                     <button id="btnLimparFiltroDoacaoObra" class="btn-secondary">Limpar</button>
                     <button id="btnExportarDoacoesObra" class="btn-excel"><i class="fas fa-file-excel"></i> Exportar Doações</button>
-                    <button id="btnRecarregarDoacoes" class="btn-secondary" style="background:#2c7a4a; color:white;"><i class="fas fa-sync-alt"></i> Recarregar Doações</button>
+                    <button id="btnRecarregarDoacoes" class="btn-secondary" style="background:#2c7a4a; color:white;"><i class="fas fa-sync-alt"></i> Recarregar</button>
                 </div>
                 <div class="table-wrapper">
                     <table id="tabelaDoacoesObra">
@@ -380,7 +381,7 @@
                 </div>
             </div>
 
-            <!-- Gastos da Construção -->
+            <!-- Gastos da Construção - Todos veem -->
             <div class="panel">
                 <h3><i class="fas fa-hard-hat"></i> Gastos da Construção</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
@@ -396,8 +397,8 @@
                 </div>
             </div>
 
-            <!-- Registrar Gasto da Construção -->
-            <div class="panel">
+            <!-- Registrar Gasto da Construção - Só Tesoureiro vê -->
+            <div id="registrarGastoPanel" class="panel" style="display: none;">
                 <h3><i class="fas fa-plus-circle"></i> Registrar Gasto da Construção</h3>
                 <div class="entrada-form" style="margin-bottom: 0;">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 12px;">
@@ -457,6 +458,20 @@
     let filtroEtapaObra = "";
     let filtroDoacaoObraMes = "";
 
+    // ==================== FUNÇÃO PARA MOSTRAR/ESCONDER PAINÉIS POR PERFIL ====================
+    function ajustarPermissoesPorPerfil() {
+        const isTesoureiro = currentUser?.role === 'tesoureiro';
+        
+        // Painéis que só Tesoureiro vê
+        const registrarDoacaoPanel = document.getElementById("registrarDoacaoPanel");
+        const registrarGastoPanel = document.getElementById("registrarGastoPanel");
+        const novaEtapaPanel = document.getElementById("novaEtapaPanel");
+        
+        if(registrarDoacaoPanel) registrarDoacaoPanel.style.display = isTesoureiro ? 'block' : 'none';
+        if(registrarGastoPanel) registrarGastoPanel.style.display = isTesoureiro ? 'block' : 'none';
+        if(novaEtapaPanel) novaEtapaPanel.style.display = isTesoureiro ? 'block' : 'none';
+    }
+    
     // ==================== FUNÇÕES DE APROVAÇÃO ====================
     async function aprovarDespesa(id) {
         const despesa = despesas.find(d => d.id === id);
@@ -479,32 +494,27 @@
     
     // ==================== FUNÇÕES DE CARREGAMENTO ====================
     async function carregarDados() {
-        // Carregar despesas
         const despesasSnap = await database.ref('despesas').once('value');
         despesas = despesasSnap.val() ? Object.values(despesasSnap.val()) : [];
         
-        // Carregar entradas
         const entradasSnap = await database.ref('entradas').once('value');
         entradas = entradasSnap.val() ? Object.values(entradasSnap.val()) : [];
         
-        // Carregar doações
         const doacoesSnap = await database.ref('obra/doacoes').once('value');
         doacoesObra = doacoesSnap.val() ? Object.values(doacoesSnap.val()) : [];
         
-        // Carregar etapas
         const etapasSnap = await database.ref('obra/etapas').once('value');
         obraEtapas = etapasSnap.val() ? Object.values(etapasSnap.val()) : [];
         
-        // Carregar gastos
         const gastosSnap = await database.ref('obra/gastos').once('value');
         obraGastos = gastosSnap.val() ? Object.values(gastosSnap.val()) : [];
         
-        // Atualizar UI
         renderTabelaDespesas();
         renderTabelaEntradas();
         refreshDashboard();
         renderTabelaDoacoes();
         renderObra();
+        ajustarPermissoesPorPerfil();
     }
     
     // ==================== RENDERIZAÇÃO TESOURARIA ====================
@@ -518,7 +528,7 @@
         if(!tbody) return;
         
         if(dados.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma despesa registrada</td><tr>";
+            tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma despesa registrada</td></tr>";
             return;
         }
         
@@ -538,19 +548,11 @@
             
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td>${exp.mesAno}</td>
-                <td>${escapeHtml(exp.descricao)}</td>
-                <td>${escapeHtml(exp.categoria)}</td>
-                <td><strong>R$ ${exp.valor.toFixed(2).replace('.',',')}</strong></td>
-                <td><span class="${statusClass}">${statusText}</span>${exp.aprovadoPor ? `<br><small>por ${exp.aprovadoPor}</small>` : ''}</td>
-                <td>${escapeHtml(exp.obs || '-')}</td>
-                <td>${compHtml}</td>
-                <td>${acoes}</td>
+                <td>${exp.mesAno}${exp.descricao}${exp.categoria}<strong>R$ ${exp.valor.toFixed(2).replace('.',',')}</strong><span class="${statusClass}">${statusText}</span>${exp.aprovadoPor ? `<br><small>por ${exp.aprovadoPor}</small>` : ''}${exp.obs || '-'}${compHtml}${acoes}
             `;
             tbody.appendChild(tr);
         });
         
-        // Eventos
         document.querySelectorAll(".approve-expense").forEach(btn => {
             btn.addEventListener("click", async (e) => {
                 const id = parseInt(btn.getAttribute("data-id"));
@@ -598,14 +600,7 @@
                 acoes = `<i class="fas fa-trash-alt delete-entrada" data-id="${entry.id}" style="color:#b91c1c; cursor:pointer;"></i>`;
             }
             const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${entry.mes}</td>
-                <td>${escapeHtml(entry.descricao)}</td>
-                <td><strong style="color:#2c7a4a;">R$ ${entry.valor.toFixed(2).replace('.',',')}</strong></td>
-                <td>${entry.registradoPor}</td>
-                <td>${entry.dataRegistro}</td>
-                <td>${acoes}</td>
-            `;
+            tr.innerHTML = `<td>${entry.mes}${entry.descricao}<strong style="color:#2c7a4a;">R$ ${entry.valor.toFixed(2).replace('.',',')}</strong>${entry.registradoPor}${entry.dataRegistro}${acoes}`;
             tbody.appendChild(tr);
         });
         
@@ -647,7 +642,7 @@
         const tbody = document.getElementById("tbodyDoacoesObra");
         if(!tbody) return;
         if(doacoesFiltradas.length === 0) {
-            tbody.innerHTML = "<td><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma doação registrada</td></tr>";
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma doação registrada</td></tr>";
             return;
         }
         tbody.innerHTML = "";
@@ -657,14 +652,7 @@
                 acoes = `<button class="btn-delete delete-doacao" data-id="${d.id}" style="background:#b91c1c; color:white; border:none; padding:4px 8px; border-radius:20px; cursor:pointer;"><i class="fas fa-trash"></i></button>`;
             }
             const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${d.data || '-'}</td>
-                <td>${escapeHtml(d.doador || 'Anônimo')}</td>
-                <td>${escapeHtml(d.descricao || 'Doação para obra')}</td>
-                <td><strong style="color:#2c7a4a;">R$ ${(d.valor || 0).toFixed(2).replace('.',',')}</strong></td>
-                <td>${d.registradoPor || '-'}</td>
-                <td>${acoes}</td>
-            `;
+            tr.innerHTML = `<td>${d.data || '-'}${escapeHtml(d.doador || 'Anônimo')}${escapeHtml(d.descricao || 'Doação para obra')}<strong style="color:#2c7a4a;">R$ ${(d.valor || 0).toFixed(2).replace('.',',')}</strong>${d.registradoPor || '-'}${acoes}`;
             tbody.appendChild(tr);
         });
         
@@ -680,7 +668,6 @@
     }
     
     function renderObra() {
-        // Atualizar cards
         const totalDoacoes = doacoesObra.reduce((s,d) => s + (d.valor || 0), 0);
         const totalGasto = obraGastos.filter(g => g.status === 'aprovado').reduce((s,g) => s + g.valor, 0);
         const saldo = totalDoacoes - totalGasto;
@@ -691,7 +678,6 @@
         document.getElementById("obraSaldo").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
         document.getElementById("obraProgresso").innerHTML = `${progresso.toFixed(1)}%`;
         
-        // Gráfico
         const labels = obraEtapas.map(e => e.nome);
         const orcamentos = obraEtapas.map(e => e.orcamento);
         const realizados = obraEtapas.map(e => e.realizado);
@@ -701,7 +687,6 @@
             graficoObraChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Orçamento', data: orcamentos, backgroundColor: '#2c7a4a', borderRadius: 8 }, { label: 'Realizado', data: realizados, backgroundColor: '#f4a261', borderRadius: 8 }] }, options: { responsive: true } });
         }
         
-        // Etapas
         const etapasContainer = document.getElementById("etapasContainer");
         if(etapasContainer) {
             if(obraEtapas.length === 0) {
@@ -715,7 +700,6 @@
             }
         }
         
-        // Selects
         const selectEtapa = document.getElementById("obraEtapa");
         const selectFiltro = document.getElementById("filtroEtapaObra");
         if(selectEtapa) {
@@ -726,7 +710,6 @@
             selectFiltro.value = filtroEtapaObra;
         }
         
-        // Gastos
         let gastosFiltrados = filtroEtapaObra ? obraGastos.filter(g => g.etapa === filtroEtapaObra) : obraGastos;
         gastosFiltrados.sort((a,b) => b.id - a.id);
         const tbodyGastos = document.getElementById("tbodyObra");
@@ -737,23 +720,17 @@
             }
             tbodyGastos.innerHTML = "";
             gastosFiltrados.forEach(g => {
-                const acoes = `<button class="btn-edit" onclick='editarGasto(${g.id})'><i class="fas fa-edit"></i></button><button class="btn-delete" onclick='excluirGasto(${g.id})'><i class="fas fa-trash"></i></button>`;
+                let acoes = "";
+                if(currentUser?.role === 'tesoureiro') {
+                    acoes = `<button class="btn-edit" onclick='editarGasto(${g.id})'><i class="fas fa-edit"></i></button><button class="btn-delete" onclick='excluirGasto(${g.id})'><i class="fas fa-trash"></i></button>`;
+                }
                 const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${g.data}</td>
-                    <td>${g.etapa}</td>
-                    <td>${g.descricao}</td>
-                    <td>${g.fornecedor || '-'}</td>
-                    <td><strong>R$ ${g.valor.toFixed(2).replace('.',',')}</strong></td>
-                    <td><span class="status-aprovado">✅ Aprovado</span></td>
-                    <td>${acoes}</td>
-                `;
+                tr.innerHTML = `<td>${g.data}${g.etapa}${g.descricao}${g.fornecedor || '-'}<strong>R$ ${g.valor.toFixed(2).replace('.',',')}</strong><span class="status-aprovado">✅ Aprovado</span>${acoes}`;
                 tbodyGastos.appendChild(tr);
             });
         }
     }
     
-    // ==================== FUNÇÕES AUXILIARES ====================
     function renderCategorias() {
         const container = document.getElementById("listaCategoriasContainer");
         if(!container) return;
