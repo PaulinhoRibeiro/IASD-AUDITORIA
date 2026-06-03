@@ -440,18 +440,15 @@
 
 <script>
     // ==================== CONFIGURAÇÃO DO FIREBASE ====================
-    // ⚠️ ATENÇÃO: Substitua com os dados do SEU projeto Firebase! ⚠️
-    // Você encontra essas informações em: https://console.firebase.google.com
-    // Vá em "Configurações do projeto" → "Seus aplicativos" → "Firebase SDK snippet" → "CDN"
-    
+    // Configuração do seu projeto Firebase
     const firebaseConfig = {
-        apiKey: "SUA_API_KEY_AQUI",
-        authDomain: "SEU_PROJETO.firebaseapp.com",
-        databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com",
-        projectId: "SEU_PROJETO",
-        storageBucket: "SEU_PROJETO.appspot.com",
-        messagingSenderId: "SEU_MESSAGING_SENDER_ID",
-        appId: "SEU_APP_ID"
+        apiKey: "AIzaSyAogWId8qBXRCSc6DET2t-Q355AxUFbGIY",
+        authDomain: "iasd-cohab-tesouraria.firebaseapp.com",
+        databaseURL: "https://iasd-cohab-tesouraria-default-rtdb.firebaseio.com",
+        projectId: "iasd-cohab-tesouraria",
+        storageBucket: "iasd-cohab-tesouraria.firebasestorage.app",
+        messagingSenderId: "1027222095852",
+        appId: "1:1027222095852:web:b7aef4930faaf6e7fce2c9"
     };
     
     // Inicializar Firebase
@@ -496,7 +493,7 @@
     let filtroDoacaoObraMes = "";
     
     // Flag para evitar loops
-    let isLoading = false;
+    let isLoading = true;
     
     // ==================== FUNÇÕES DE SINCRONIZAÇÃO ====================
     function updateSyncIndicator(connected = true) {
@@ -514,20 +511,17 @@
     
     // Escutar mudanças em tempo real
     function setupRealtimeListeners() {
-        isLoading = true;
-        
         // Categorias
         dbRefs.categorias.on('value', (snapshot) => {
             const data = snapshot.val();
-            if(data && !isLoading) {
+            if(data) {
                 categorias = data;
-                renderCategorias();
-                renderCategoriasSelect();
-            } else if(data && isLoading) {
-                categorias = data;
-                renderCategorias();
-                renderCategoriasSelect();
+            } else if(!data && isLoading) {
+                // Primeira vez, salvar categorias padrão
+                dbRefs.categorias.set(categorias);
             }
+            renderCategorias();
+            renderCategoriasSelect();
         });
         
         // Despesas
@@ -535,18 +529,11 @@
             const data = snapshot.val();
             if(data) {
                 despesas = Object.values(data);
-                if(!isLoading) {
-                    renderTabelaDespesas();
-                    refreshDashboard();
-                } else {
-                    renderTabelaDespesas();
-                    refreshDashboard();
-                }
             } else {
                 despesas = [];
-                renderTabelaDespesas();
-                refreshDashboard();
             }
+            renderTabelaDespesas();
+            refreshDashboard();
         });
         
         // Entradas
@@ -554,13 +541,11 @@
             const data = snapshot.val();
             if(data) {
                 entradas = Object.values(data);
-                renderTabelaEntradas();
-                refreshDashboard();
             } else {
                 entradas = [];
-                renderTabelaEntradas();
-                refreshDashboard();
             }
+            renderTabelaEntradas();
+            refreshDashboard();
         });
         
         // Auditoria
@@ -568,11 +553,10 @@
             const data = snapshot.val();
             if(data) {
                 auditLog = Object.values(data);
-                renderAuditLog();
             } else {
                 auditLog = [];
-                renderAuditLog();
             }
+            renderAuditLog();
         });
         
         // Etapas da Obra
@@ -580,12 +564,11 @@
             const data = snapshot.val();
             if(data) {
                 obraEtapas = Object.values(data);
-                atualizarRealizadoEtapas();
-                renderObra();
             } else {
                 obraEtapas = [];
-                renderObra();
             }
+            atualizarRealizadoEtapas();
+            renderObra();
         });
         
         // Gastos da Obra
@@ -593,12 +576,11 @@
             const data = snapshot.val();
             if(data) {
                 obraGastos = Object.values(data);
-                atualizarRealizadoEtapas();
-                renderObra();
             } else {
                 obraGastos = [];
-                renderObra();
             }
+            atualizarRealizadoEtapas();
+            renderObra();
         });
         
         // Doações da Obra
@@ -606,16 +588,15 @@
             const data = snapshot.val();
             if(data) {
                 doacoesObra = Object.values(data);
-                renderObra();
             } else {
                 doacoesObra = [];
-                renderObra();
             }
+            renderObra();
         });
         
         setTimeout(() => {
             isLoading = false;
-        }, 1000);
+        }, 2000);
     }
     
     function atualizarRealizadoEtapas() {
@@ -766,11 +747,6 @@
         }
     }
     
-    async function editarGastoObraFirebase(id, novosDados) {
-        await dbRefs.obraGastos.child(id.toString()).update(novosDados);
-        await registrarAuditoriaFirebase("UPDATE", "obra_gasto", id, `Gasto atualizado`);
-    }
-    
     async function resetarSistemaFirebase() {
         if(confirm("⚠️ ATENÇÃO! Isso irá apagar TODOS os dados do sistema. Tem certeza?")) {
             await dbRefs.categorias.set(["Culto", "Manutenção", "Música", "Eventos", "Material de Limpeza", "Comunicação", "Educação Cristã"]);
@@ -837,7 +813,7 @@
         let tbody = document.getElementById("tbodyDespesas");
         if(!tbody) return;
         if(dados.length === 0) { 
-            tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma despesa registrada</td><tr>";
+            tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma despesa registrada</td></tr>";
             return; 
         }
         tbody.innerHTML = "";
@@ -884,7 +860,7 @@
         if(!tbody) return;
         let dados = [...entradas].sort((a,b)=>b.mes.localeCompare(a.mes));
         if(dados.length === 0) { 
-            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma entrada registrada</td></tr>";
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma entrada registrada</td></table>";
             return; 
         }
         tbody.innerHTML = "";
@@ -990,10 +966,10 @@
         gastosFiltrados.sort((a,b)=>b.id - a.id);
         let tbodyGastos = document.getElementById("tbodyObra");
         if(tbodyGastos) {
-            if(gastosFiltrados.length === 0) { tbodyGastos.innerHTML = "<td><td colspan='7' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhum gasto registrado</td></table>"; return; }
+            if(gastosFiltrados.length === 0) { tbodyGastos.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhum gasto registrado</td></tr>"; return; }
             tbodyGastos.innerHTML = "";
             gastosFiltrados.forEach(g => {
-                let acoes = `<button class="btn-edit" onclick="editarGastoObraFirebase(${g.id})"><i class="fas fa-edit"></i></button><button class="btn-delete" onclick="excluirGastoObraFirebase(${g.id})"><i class="fas fa-trash"></i></button>`;
+                let acoes = `<button class="btn-edit" onclick='editarGastoObraFirebase(${g.id})'><i class="fas fa-edit"></i></button><button class="btn-delete" onclick='excluirGastoObraFirebase(${g.id})'><i class="fas fa-trash"></i></button>`;
                 let tr = document.createElement("tr");
                 tr.innerHTML = `<td>${g.data}</td><td>${g.etapa}</td><td>${g.descricao}</td><td>${g.fornecedor || '-'}</td><td><strong>R$ ${g.valor.toFixed(2).replace('.',',')}</strong></td><td><span class="status-aprovado">✅ Aprovado</span></td><td>${acoes}</td>`;
                 tbodyGastos.appendChild(tr);
@@ -1004,7 +980,7 @@
         doacoesFiltradas.sort((a,b)=>b.id - a.id);
         let tbodyDoacoes = document.getElementById("tbodyDoacoesObra");
         if(tbodyDoacoes) {
-            if(doacoesFiltradas.length === 0) { tbodyDoacoes.innerHTML = "<td><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma doação registrada</td><td>"; return; }
+            if(doacoesFiltradas.length === 0) { tbodyDoacoes.innerHTML = "<td><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma doação registrada</td></tr>"; return; }
             tbodyDoacoes.innerHTML = "";
             doacoesFiltradas.forEach(d => {
                 let acoes = `<button class="btn-delete delete-doacao" data-id="${d.id}" style="background:#b91c1c; color:white; border:none; padding:4px 8px; border-radius:20px; cursor:pointer;"><i class="fas fa-trash"></i></button>`;
@@ -1247,6 +1223,32 @@
         
         document.getElementById("btnLogout")?.addEventListener("click", logout);
     }
+    
+    // Expor funções globalmente para os botões de edição
+    window.editarGastoObraFirebase = async (id) => {
+        let gasto = obraGastos.find(g => g.id == id);
+        if(!gasto) return;
+        
+        let novaData = prompt("Nova data:", gasto.data);
+        let novaEtapa = prompt("Nova etapa:", gasto.etapa);
+        let novaDescricao = prompt("Nova descrição:", gasto.descricao);
+        let novoFornecedor = prompt("Novo fornecedor:", gasto.fornecedor);
+        let novoValor = prompt("Novo valor:", gasto.valor);
+        
+        if(novaData && novaEtapa && novaDescricao && novoFornecedor && novoValor) {
+            await dbRefs.obraGastos.child(id.toString()).update({
+                data: novaData,
+                etapa: novaEtapa,
+                descricao: novaDescricao,
+                fornecedor: novoFornecedor,
+                valor: parseFloat(novoValor)
+            });
+            await registrarAuditoriaFirebase("UPDATE", "obra_gasto", id, `Gasto atualizado`);
+            alert("✅ Gasto atualizado!");
+        }
+    };
+    
+    window.excluirGastoObraFirebase = excluirGastoObraFirebase;
     
     function checkLoggedUser() {
         let savedUser = sessionStorage.getItem("currentUser");
