@@ -576,27 +576,37 @@
             refreshAllUI();
         }
 
-        function getEntradasPorMes(mes) { return entradas.filter(e => e.mes === mes).reduce((s,e) => s + e.valor, 0); }
-        function getDespesasPorMes(mes) { return despesas.filter(d => d.mesAno === mes && d.status === 'aprovado').reduce((s,d) => s + d.valor, 0); }
+        function getEntradasPorMes(mes) { 
+            return entradas.filter(e => e.mes === mes).reduce((s,e) => s + e.valor, 0); 
+        }
+        
+        function getDespesasPorMes(mes) { 
+            let despesasAprovadas = despesas.filter(d => d.mesAno === mes && d.status === 'aprovado');
+            console.log(`Despesas aprovadas em ${mes}:`, despesasAprovadas);
+            return despesasAprovadas.reduce((s,d) => s + d.valor, 0); 
+        }
 
         // ==================== FUNÇÕES DE DESPESAS (TESOURARIA) ====================
         function adicionarDespesa(descricao, valor, categoria, mesAno, obs, comprovanteBase64 = null) {
             let nova = { id: Date.now(), descricao, valor, categoria, mesAno, status: 'pendente', obs: obs || "", comprovanteBase64, dataLancamento: new Date().toISOString(), aprovadoPor: null };
             despesas.push(nova);
             saveToLocal();
-            registrarAuditoria("CREATE", "despesa", nova.id, `Despesa: ${descricao} - R$ ${valor}`);
+            registrarAuditoria("CREATE", "despesa", nova.id, `Despesa: ${descricao} - R$ ${valor} - AGUARDANDO APROVAÇÃO`);
             refreshAllUI();
+            alert(`✅ Despesa lançada! Aguardando aprovação do Ancião. Valor: R$ ${valor.toFixed(2)}`);
             return nova;
         }
         
         function aprovarDespesa(id) {
             let index = despesas.findIndex(d => d.id == id);
             if(index !== -1 && despesas[index].status === 'pendente') {
+                let valorAntigo = despesas[index].valor;
                 despesas[index].status = 'aprovado';
                 despesas[index].aprovadoPor = currentUser.nome;
                 saveToLocal();
-                registrarAuditoria("UPDATE", "despesa", id, `Despesa APROVADA: ${despesas[index].descricao}`);
+                registrarAuditoria("UPDATE", "despesa", id, `Despesa APROVADA por ${currentUser.nome}: ${despesas[index].descricao} - R$ ${valorAntigo}`);
                 refreshAllUI();
+                alert(`✅ Despesa aprovada! Valor de R$ ${valorAntigo.toFixed(2)} foi debitado do saldo.`);
                 return true;
             }
             return false;
@@ -604,14 +614,22 @@
         
         function excluirDespesa(id) {
             if(currentUser.role !== 'tesoureiro') { alert("Apenas o Tesoureiro pode excluir despesas."); return; }
+            let removida = despesas.find(d => d.id == id);
             despesas = despesas.filter(d => d.id != id);
             saveToLocal();
-            registrarAuditoria("DELETE", "despesa", id, `Despesa removida`);
+            registrarAuditoria("DELETE", "despesa", id, `Despesa REMOVIDA: ${removida?.descricao}`);
             refreshAllUI();
+            alert(`🗑️ Despesa removida: ${removida?.descricao}`);
         }
 
         function adicionarCategoria(nome) {
-            if(!categorias.includes(nome)) { categorias.push(nome); saveToLocal(); registrarAuditoria("CREATE", "categoria", nome, `Nova categoria: ${nome}`); refreshAllUI(); return true; }
+            if(!categorias.includes(nome)) { 
+                categorias.push(nome); 
+                saveToLocal(); 
+                registrarAuditoria("CREATE", "categoria", nome, `Nova categoria: ${nome}`); 
+                refreshAllUI(); 
+                return true; 
+            }
             return false;
         }
         
@@ -765,12 +783,12 @@
             gastosFiltrados.sort((a,b)=>b.id - a.id);
             let tbodyGastos = document.getElementById("tbodyObra");
             if(tbodyGastos) {
-                if(gastosFiltrados.length === 0) { tbodyGastos.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhum gasto registrado</td></tr>"; return; }
+                if(gastosFiltrados.length === 0) { tbodyGastos.innerHTML = "</td><td colspan='7' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhum gasto registrado</td></tr>"; return; }
                 tbodyGastos.innerHTML = "";
                 gastosFiltrados.forEach(g => {
                     let acoes = `<button class="btn-edit" onclick="editarGastoObra(${g.id})"><i class="fas fa-edit"></i></button><button class="btn-delete" onclick="excluirGastoObra(${g.id})"><i class="fas fa-trash"></i></button>`;
                     let tr = document.createElement("tr");
-                    tr.innerHTML = `<td>${g.data}</td><td>${g.etapa}</td><td>${g.descricao}</td><td>${g.fornecedor || '-'}</td><td><strong>R$ ${g.valor.toFixed(2).replace('.',',')}</strong></td><td><span class="status-aprovado">✅ Aprovado</span></td><td>${acoes}</td>`;
+                    tr.innerHTML = `<td>${g.data}${g.etapa}${g.descricao}${g.fornecedor || '-'}<strong>R$ ${g.valor.toFixed(2).replace('.',',')}</strong><span class="status-aprovado">✅ Aprovado</span>${acoes}`;
                     tbodyGastos.appendChild(tr);
                 });
             }
@@ -785,7 +803,7 @@
                 doacoesFiltradas.forEach(d => {
                     let acoes = `<button class="btn-delete delete-doacao" data-id="${d.id}" style="background:#b91c1c; color:white; border:none; padding:4px 8px; border-radius:20px; cursor:pointer;"><i class="fas fa-trash"></i></button>`;
                     let tr = document.createElement("tr");
-                    tr.innerHTML = `<td>${d.data}</td><td>${d.doador}</td><td>${d.descricao}</td><td><strong style="color:#2c7a4a;">R$ ${d.valor.toFixed(2).replace('.',',')}</strong></td><td>${d.registradoPor}</td><td>${acoes}</td>`;
+                    tr.innerHTML = `<td>${d.data}${d.doador}${d.descricao}<strong style="color:#2c7a4a;">R$ ${d.valor.toFixed(2).replace('.',',')}</strong>${d.registradoPor}${acoes}`;
                     tbodyDoacoes.appendChild(tr);
                 });
                 document.querySelectorAll(".delete-doacao").forEach(btn => btn.addEventListener("click", (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Excluir esta doação?")) excluirDoacaoObra(id); }));
@@ -823,16 +841,18 @@
                 let statusText = exp.status === 'pendente' ? '⏳ Pendente' : '✅ Aprovado';
                 let compHtml = exp.comprovanteBase64 ? `<i class="fas fa-paperclip comprovante-link" data-id="${exp.id}" style="cursor:pointer; color:#2c7a4a;"></i>` : '—';
                 let acoes = "";
-                if(currentUser?.role === 'anciao' && exp.status === 'pendente') acoes = `<i class="fas fa-check-circle approve-expense" data-id="${exp.id}" style="color:#2c7a4a; font-size:1.2rem; cursor:pointer;"></i>`;
-                if(currentUser?.role === 'tesoureiro') acoes = `<i class="fas fa-trash-alt delete-expense" data-id="${exp.id}" style="color:#b91c1c; cursor:pointer;"></i>`;
+                if(currentUser?.role === 'anciao' && exp.status === 'pendente') acoes = `<i class="fas fa-check-circle approve-expense" data-id="${exp.id}" style="color:#2c7a4a; font-size:1.2rem; cursor:pointer;" title="Aprovar despesa"></i>`;
+                if(currentUser?.role === 'tesoureiro') acoes = `<i class="fas fa-trash-alt delete-expense" data-id="${exp.id}" style="color:#b91c1c; cursor:pointer;" title="Excluir despesa"></i>`;
+                if(currentUser?.role === 'auditor') acoes = `<i class="fas fa-eye" style="color:#6c757d;" title="Apenas visualização"></i>`;
                 let tr = document.createElement("tr");
-                tr.innerHTML = `<td>${exp.mesAno}</td><td>${exp.descricao}</td><td>${exp.categoria}</td><td><strong>R$ ${exp.valor.toFixed(2)}</strong></td><td><span class="${statusClass}">${statusText}</span></td><td>${exp.obs || '-'}</td><td>${compHtml}</td><td>${acoes}</td>`;
+                tr.innerHTML = `<td>${exp.mesAno}${exp.descricao}${exp.categoria}<strong>R$ ${exp.valor.toFixed(2).replace('.',',')}</strong><span class="${statusClass}">${statusText}</span>${exp.obs || '-'}${compHtml}${acoes}`;
                 tbody.appendChild(tr);
             });
-            document.querySelectorAll(".delete-expense").forEach(btn => btn.addEventListener("click", (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Excluir?")) excluirDespesa(id); }));
-            document.querySelectorAll(".approve-expense").forEach(btn => btn.addEventListener("click", (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Aprovar?")) aprovarDespesa(id); }));
-            document.querySelectorAll(".comprovante-link").forEach(el => { el.addEventListener("click", (e) => { let id = parseInt(el.getAttribute("data-id")); let exp = despesas.find(d=>d.id===id); if(exp?.comprovanteBase64) { let win = window.open(); win.document.write(`<html><body><h3>${exp.descricao}</h3><img src="${exp.comprovanteBase64}" style="max-width:100%"/></body></html>`); } else alert("Sem comprovante"); }); });
-            document.getElementById("pendentesCount").innerHTML = despesas.filter(d=>d.status==='pendente').length;
+            document.querySelectorAll(".delete-expense").forEach(btn => btn.addEventListener("click", (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Excluir esta despesa permanentemente?")) excluirDespesa(id); }));
+            document.querySelectorAll(".approve-expense").forEach(btn => btn.addEventListener("click", (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm(`Aprovar esta despesa no valor de R$ ${despesas.find(d=>d.id===id)?.valor.toFixed(2)}?`)) aprovarDespesa(id); }));
+            document.querySelectorAll(".comprovante-link").forEach(el => { el.addEventListener("click", (e) => { let id = parseInt(el.getAttribute("data-id")); let exp = despesas.find(d=>d.id===id); if(exp?.comprovanteBase64) { let win = window.open(); win.document.write(`<html><body><h3>${exp.descricao}</h3><img src="${exp.comprovanteBase64}" style="max-width:100%"/></body></html>`); } else alert("Nenhum comprovante anexado."); }); });
+            let pendCount = despesas.filter(d=>d.status==='pendente').length;
+            document.getElementById("pendentesCount").innerHTML = pendCount;
             let anciaoHint = document.getElementById("anciaoHint");
             if(anciaoHint) anciaoHint.style.display = currentUser?.role === 'anciao' ? 'flex' : 'none';
         }
@@ -845,24 +865,29 @@
             tbody.innerHTML = "";
             dados.forEach(entry => {
                 let acoes = "";
-                if(currentUser?.role === 'tesoureiro') acoes = `<i class="fas fa-trash-alt delete-entrada" data-id="${entry.id}" style="color:#b91c1c; cursor:pointer;"></i>`;
+                if(currentUser?.role === 'tesoureiro') acoes = `<i class="fas fa-trash-alt delete-entrada" data-id="${entry.id}" style="color:#b91c1c; cursor:pointer;" title="Excluir entrada"></i>`;
                 let tr = document.createElement("tr");
-                tr.innerHTML = `<td>${entry.mes}</td><td>${entry.descricao}</td><td><strong>R$ ${entry.valor.toFixed(2).replace('.',',')}</strong></td><td>${entry.registradoPor}</td><td>${entry.dataRegistro}</td><td>${acoes}</td>`;
+                tr.innerHTML = `<td>${entry.mes}${entry.descricao}<strong style="color:#2c7a4a;">R$ ${entry.valor.toFixed(2).replace('.',',')}</strong>${entry.registradoPor}<small>${entry.dataRegistro}</small>${acoes}`;
                 tbody.appendChild(tr);
             });
-            document.querySelectorAll(".delete-entrada").forEach(btn => btn.addEventListener("click", (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Excluir?")) excluirEntrada(id); }));
+            document.querySelectorAll(".delete-entrada").forEach(btn => btn.addEventListener("click", (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Excluir esta entrada?")) excluirEntrada(id); }));
         }
         
         function refreshDashboard() {
             let mes = document.getElementById("filtroMesDashboard")?.value || new Date().toISOString().slice(0,7);
             let totalEntradas = getEntradasPorMes(mes);
             let totalDespesas = getDespesasPorMes(mes);
+            let saldo = totalEntradas - totalDespesas;
             document.getElementById("totalEntradasMes").innerHTML = `R$ ${totalEntradas.toFixed(2).replace('.',',')}`;
             document.getElementById("totalDespesasMes").innerHTML = `R$ ${totalDespesas.toFixed(2).replace('.',',')}`;
-            document.getElementById("saldoMes").innerHTML = `R$ ${(totalEntradas - totalDespesas).toFixed(2).replace('.',',')}`;
+            document.getElementById("saldoMes").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
+            if(saldo < 0) document.getElementById("saldoMes").style.color = "#b91c1c";
+            else document.getElementById("saldoMes").style.color = "#1e4a2f";
+            
+            // Atualizar gráfico
             if(graficoChart) graficoChart.destroy();
             let ctx = document.getElementById("graficoComparativo").getContext("2d");
-            graficoChart = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Despesas'], datasets: [{ data: [totalEntradas, totalDespesas], backgroundColor: ['#2c7a4a', '#b91c1c'], borderRadius: 8 }] }, options: { responsive: true } });
+            graficoChart = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Despesas Aprovadas'], datasets: [{ data: [totalEntradas, totalDespesas], backgroundColor: ['#2c7a4a', '#b91c1c'], borderRadius: 8 }] }, options: { responsive: true } });
         }
         
         function renderAuditLog() {
@@ -879,7 +904,15 @@
             container.innerHTML = html;
         }
         
-        function refreshAllUI() { renderCategorias(); renderTabelaDespesas(); renderTabelaEntradas(); refreshDashboard(); renderAuditLog(); renderObra(); }
+        function refreshAllUI() { 
+            renderCategorias(); 
+            renderTabelaDespesas(); 
+            renderTabelaEntradas(); 
+            refreshDashboard(); 
+            renderAuditLog(); 
+            renderObra(); 
+        }
+        
         function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
         function logout() { sessionStorage.removeItem("currentUser"); currentUser = null; document.getElementById("mainApp").style.display = "none"; document.getElementById("loginScreen").style.display = "flex"; }
 
@@ -915,23 +948,6 @@
 
         // ==================== FUNÇÃO DE INICIALIZAÇÃO ====================
         function initStorage() {
-            // Verificar se já existem dados no localStorage
-            // Se existir dados antigos com doações de 65000, vamos limpar
-            let obraExistente = localStorage.getItem(STORAGE_OBRA);
-            if(obraExistente) {
-                let obraData = JSON.parse(obraExistente);
-                // Se houver doações antigas, vamos zerar
-                if(obraData.doacoes && obraData.doacoes.length > 0) {
-                    // Verificar se alguma doação tem valor
-                    let temDoacao = obraData.doacoes.some(d => d.valor > 0);
-                    if(temDoacao) {
-                        // Zerar todas as doações
-                        obraData.doacoes = [];
-                        localStorage.setItem(STORAGE_OBRA, JSON.stringify(obraData));
-                    }
-                }
-            }
-            
             // Carregar dados do localStorage
             if(!localStorage.getItem(STORAGE_CATEGORIES)) {
                 localStorage.setItem(STORAGE_CATEGORIES, JSON.stringify(categorias));
@@ -944,6 +960,7 @@
                 despesas = [];
             } else {
                 despesas = JSON.parse(localStorage.getItem(STORAGE_EXPENSES));
+                console.log("Despesas carregadas:", despesas);
             }
             
             if(!localStorage.getItem(STORAGE_ENTRADAS)) {
@@ -1056,9 +1073,10 @@
                 let mes = document.getElementById("entradaMes").value;
                 let valor = parseFloat(document.getElementById("entradaValor").value);
                 let descricao = document.getElementById("entradaDescricao").value;
-                if(!mes || isNaN(valor) || valor <= 0) return alert("Preencha corretamente.");
+                if(!mes || isNaN(valor) || valor <= 0) return alert("Preencha mês e valor corretamente.");
                 registrarEntrada(mes, valor, descricao);
                 document.getElementById("entradaValor").value = "";
+                document.getElementById("entradaDescricao").value = "";
                 alert("✅ Entrada registrada!");
             });
             
@@ -1072,8 +1090,8 @@
                 let obs = document.getElementById("obsAuditoria").value;
                 let file = document.getElementById("comprovanteFile").files[0];
                 if(!desc || isNaN(valor) || valor <= 0 || !cat || !mes) return alert("Preencha todos os campos.");
-                if(file) { let reader = new FileReader(); reader.onload = (ev) => { adicionarDespesa(desc, valor, cat, mes, obs, ev.target.result); alert("✅ Despesa lançada!"); document.getElementById("expenseForm").reset(); }; reader.readAsDataURL(file); }
-                else { adicionarDespesa(desc, valor, cat, mes, obs, null); alert("✅ Despesa lançada!"); document.getElementById("expenseForm").reset(); }
+                if(file) { let reader = new FileReader(); reader.onload = (ev) => { adicionarDespesa(desc, valor, cat, mes, obs, ev.target.result); document.getElementById("expenseForm").reset(); }; reader.readAsDataURL(file); }
+                else { adicionarDespesa(desc, valor, cat, mes, obs, null); document.getElementById("expenseForm").reset(); }
             });
             
             document.getElementById("btnAddCategoria")?.addEventListener("click", () => { let nome = document.getElementById("novaCategoria").value.trim(); if(nome && currentUser?.role === 'tesoureiro') { if(adicionarCategoria(nome)) { document.getElementById("novaCategoria").value = ""; alert(`✅ Categoria "${nome}" adicionada!`); } else alert("⚠️ Categoria já existe!"); } else alert("Apenas Tesoureiro pode adicionar categorias."); });
@@ -1084,11 +1102,13 @@
             
             document.getElementById("btnRelatorioCompleto")?.addEventListener("click", () => {
                 let mes = document.getElementById("filtroMesDashboard").value;
-                let html = `<!DOCTYPE html><html><head><title>Relatório ${mes}</title><style>body{font-family:Arial;padding:40px;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ddd;padding:8px;}</style></head><body><h1>IASD COHAB</h1><h2>Relatório - ${mes}</h2><p>Entradas: R$ ${getEntradasPorMes(mes).toFixed(2)}</p><p>Despesas: R$ ${getDespesasPorMes(mes).toFixed(2)}</p><p>Saldo: R$ ${(getEntradasPorMes(mes) - getDespesasPorMes(mes)).toFixed(2)}</p></body></html>`;
+                let entradasVal = getEntradasPorMes(mes);
+                let despesasVal = getDespesasPorMes(mes);
+                let html = `<!DOCTYPE html><html><head><title>Relatório ${mes}</title><style>body{font-family:Arial;padding:40px;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ddd;padding:8px;}</style></head><body><h1>IASD COHAB</h1><h2>Relatório Financeiro - ${mes}</h2><p>💰 Entradas: R$ ${entradasVal.toFixed(2)}</p><p>📤 Despesas Aprovadas: R$ ${despesasVal.toFixed(2)}</p><p>⚖️ Saldo do Mês: R$ ${(entradasVal - despesasVal).toFixed(2)}</p></body></html>`;
                 let win = window.open(); win.document.write(html); win.print();
             });
             
-            document.getElementById("btnExportarAuditoria")?.addEventListener("click", () => { let data = { igreja: "IASD COHAB", despesas, entradas, categorias, auditLog }; let a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)], {type:"application/json"})); a.download = `auditoria_iasd_${Date.now()}.json`; a.click(); alert("✅ Exportado!"); });
+            document.getElementById("btnExportarAuditoria")?.addEventListener("click", () => { let data = { igreja: "IASD COHAB", despesas, entradas, categorias, auditLog }; let a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)], {type:"application/json"})); a.download = `auditoria_iasd_${Date.now()}.json`; a.click(); alert("✅ Dados exportados!"); });
             
             document.getElementById("btnAddEtapa")?.addEventListener("click", () => {
                 if(currentUser?.role !== 'tesoureiro') return alert("Apenas Tesoureiro pode adicionar etapas.");
