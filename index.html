@@ -440,7 +440,6 @@
 
 <script>
     // ==================== CONFIGURAÇÃO DO FIREBASE ====================
-    // Configuração do seu projeto Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyAogWId8qBXRCSc6DET2t-Q355AxUFbGIY",
         authDomain: "iasd-cohab-tesouraria.firebaseapp.com",
@@ -517,7 +516,6 @@
             if(data) {
                 categorias = data;
             } else if(!data && isLoading) {
-                // Primeira vez, salvar categorias padrão
                 dbRefs.categorias.set(categorias);
             }
             renderCategorias();
@@ -583,20 +581,37 @@
             renderObra();
         });
         
-        // Doações da Obra
+        // Doações da Obra - CORRIGIDO: força renderização
         dbRefs.doacoesObra.on('value', (snapshot) => {
             const data = snapshot.val();
+            console.log("Doações recebidas do Firebase:", data); // Log para debug
             if(data) {
                 doacoesObra = Object.values(data);
             } else {
                 doacoesObra = [];
             }
+            // Forçar atualização da interface da obra
+            atualizarRealizadoEtapas();
             renderObra();
+            // Atualizar também os cards
+            atualizarCardsObra();
         });
         
         setTimeout(() => {
             isLoading = false;
         }, 2000);
+    }
+    
+    function atualizarCardsObra() {
+        let totalDoacoes = getTotalDoacoesObra();
+        let totalGasto = getTotalRealizado();
+        let saldo = totalDoacoes - totalGasto;
+        let progresso = getProgresso();
+        
+        document.getElementById("obraTotalDoacoes").innerHTML = `R$ ${totalDoacoes.toFixed(2).replace('.',',')}`;
+        document.getElementById("obraTotalGasto").innerHTML = `R$ ${totalGasto.toFixed(2).replace('.',',')}`;
+        document.getElementById("obraSaldo").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
+        document.getElementById("obraProgresso").innerHTML = `${progresso.toFixed(1)}%`;
     }
     
     function atualizarRealizadoEtapas() {
@@ -698,25 +713,51 @@
         await dbRefs.auditLog.child(log.id.toString()).set(log);
     }
     
+    // FUNÇÃO CORRIGIDA - Registrar Doação
     async function registrarDoacaoObraFirebase(data, doador, descricao, valor) {
         let novaDoacao = { 
             id: Date.now(), 
-            data, 
+            data: data, 
             doador: doador || "Anônimo", 
             descricao: descricao || "Doação para obra", 
             valor: parseFloat(valor), 
             registradoPor: currentUser.nome, 
             dataRegistro: new Date().toISOString().split('T')[0] 
         };
+        
+        console.log("Salvando doação:", novaDoacao); // Log para debug
+        
+        // Salvar no Firebase
         await dbRefs.doacoesObra.child(novaDoacao.id.toString()).set(novaDoacao);
+        
+        // Registrar na auditoria
         await registrarAuditoriaFirebase("CREATE", "doacao_obra", novaDoacao.id, `Doação obra: ${doador} - R$ ${valor}`);
-        alert("✅ Doação registrada!");
+        
+        // Forçar atualização imediata
+        await forceRefreshDoacoes();
+        
+        alert(`✅ Doação de R$ ${valor.toFixed(2)} registrada com sucesso!`);
+    }
+    
+    // Função para forçar atualização das doações
+    async function forceRefreshDoacoes() {
+        const snapshot = await dbRefs.doacoesObra.once('value');
+        const data = snapshot.val();
+        if(data) {
+            doacoesObra = Object.values(data);
+        } else {
+            doacoesObra = [];
+        }
+        atualizarRealizadoEtapas();
+        renderObra();
+        atualizarCardsObra();
     }
     
     async function excluirDoacaoObraFirebase(id) {
         if(currentUser.role !== 'tesoureiro') return alert("Apenas Tesoureiro pode excluir doações.");
         await dbRefs.doacoesObra.child(id.toString()).remove();
         await registrarAuditoriaFirebase("DELETE", "doacao_obra", id, `Doação removida`);
+        await forceRefreshDoacoes();
     }
     
     async function adicionarEtapaFirebase(nome, orcamento) {
@@ -813,7 +854,7 @@
         let tbody = document.getElementById("tbodyDespesas");
         if(!tbody) return;
         if(dados.length === 0) { 
-            tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma despesa registrada</td></tr>";
+            tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma despesa registrada</td></td>";
             return; 
         }
         tbody.innerHTML = "";
@@ -860,7 +901,7 @@
         if(!tbody) return;
         let dados = [...entradas].sort((a,b)=>b.mes.localeCompare(a.mes));
         if(dados.length === 0) { 
-            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma entrada registrada</td></table>";
+            tbody.innerHTML = "<td><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma entrada registrada</td></tr>";
             return; 
         }
         tbody.innerHTML = "";
@@ -909,6 +950,7 @@
     }
     
     function renderObra() {
+        // Atualizar cards
         let totalDoacoes = getTotalDoacoesObra();
         let totalGasto = getTotalRealizado();
         let saldo = totalDoacoes - totalGasto;
@@ -919,6 +961,7 @@
         document.getElementById("obraSaldo").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
         document.getElementById("obraProgresso").innerHTML = `${progresso.toFixed(1)}%`;
         
+        // Gráfico
         let labels = obraEtapas.map(e => e.nome);
         let orcamentos = obraEtapas.map(e => e.orcamento);
         let realizados = obraEtapas.map(e => e.realizado);
@@ -931,6 +974,7 @@
             graficoObraChart = new Chart(ctx, { type: 'bar', data: { labels: ['Nenhuma etapa'], datasets: [{ data: [0], backgroundColor: '#ccc' }] }, options: { responsive: true } });
         }
         
+        // Etapas
         let etapasContainer = document.getElementById("etapasContainer");
         if(etapasContainer) {
             if(obraEtapas.length === 0) {
@@ -944,6 +988,7 @@
             }
         }
         
+        // Filtros etapas
         let selectEtapa = document.getElementById("obraEtapa");
         let selectFiltro = document.getElementById("filtroEtapaObra");
         if(selectEtapa) {
@@ -962,6 +1007,7 @@
             selectFiltro.value = filtroEtapaObra; 
         }
         
+        // Gastos da obra
         let gastosFiltrados = filtroEtapaObra ? obraGastos.filter(g => g.etapa === filtroEtapaObra) : obraGastos;
         gastosFiltrados.sort((a,b)=>b.id - a.id);
         let tbodyGastos = document.getElementById("tbodyObra");
@@ -976,16 +1022,27 @@
             });
         }
         
+        // Doações da obra - CORRIGIDO: tabela de doações
         let doacoesFiltradas = filtroDoacaoObraMes ? doacoesObra.filter(d => d.data.substring(0,7) === filtroDoacaoObraMes) : doacoesObra;
         doacoesFiltradas.sort((a,b)=>b.id - a.id);
         let tbodyDoacoes = document.getElementById("tbodyDoacoesObra");
         if(tbodyDoacoes) {
-            if(doacoesFiltradas.length === 0) { tbodyDoacoes.innerHTML = "<td><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma doação registrada</td></tr>"; return; }
+            if(doacoesFiltradas.length === 0) { 
+                tbodyDoacoes.innerHTML = "<td><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma doação registrada</td></tr>";
+                return; 
+            }
             tbodyDoacoes.innerHTML = "";
             doacoesFiltradas.forEach(d => {
                 let acoes = `<button class="btn-delete delete-doacao" data-id="${d.id}" style="background:#b91c1c; color:white; border:none; padding:4px 8px; border-radius:20px; cursor:pointer;"><i class="fas fa-trash"></i></button>`;
                 let tr = document.createElement("tr");
-                tr.innerHTML = `<td>${d.data}</td><td>${d.doador}</td><td>${d.descricao}</td><td><strong style="color:#2c7a4a;">R$ ${d.valor.toFixed(2).replace('.',',')}</strong></td><td>${d.registradoPor}</td><td>${acoes}</td>`;
+                tr.innerHTML = `
+                    <td>${d.data}</td>
+                    <td>${escapeHtml(d.doador)}</td></td>
+                    <td>${escapeHtml(d.descricao)}</td></td>
+                    <td><strong style="color:#2c7a4a;">R$ ${d.valor.toFixed(2).replace('.',',')}</strong></td>
+                    <td>${d.registradoPor}</td>
+                    <td>${acoes}</td>
+                `;
                 tbodyDoacoes.appendChild(tr);
             });
             document.querySelectorAll(".delete-doacao").forEach(btn => btn.addEventListener("click", async (e) => { let id = parseInt(btn.getAttribute("data-id")); if(confirm("Excluir esta doação?")) await excluirDoacaoObraFirebase(id); }));
@@ -1111,17 +1168,41 @@
         document.getElementById("btnConfirmarMaster")?.addEventListener("click", () => revelarSenhas(document.getElementById("masterPassword").value));
         document.getElementById("masterPassword")?.addEventListener("keypress", (e) => { if(e.key === 'Enter') revelarSenhas(document.getElementById("masterPassword").value); });
         
+        // Registrar Doação para Obra - CORRIGIDO
         document.getElementById("btnRegistrarDoacaoObra")?.addEventListener("click", async () => {
-            if(currentUser?.role !== 'tesoureiro') return alert("Apenas o Tesoureiro pode registrar doações.");
+            if(currentUser?.role !== 'tesoureiro') {
+                alert("Apenas o Tesoureiro pode registrar doações.");
+                return;
+            }
+            
             let data = document.getElementById("doacaoObraData").value;
             let valor = parseFloat(document.getElementById("doacaoObraValor").value);
-            let doador = document.getElementById("doacaoObraDoador").value;
-            let descricao = document.getElementById("doacaoObraDescricao").value;
-            if(!data || isNaN(valor) || valor <= 0) return alert("Preencha data e valor corretamente.");
+            let doador = document.getElementById("doacaoObraDoador").value.trim();
+            let descricao = document.getElementById("doacaoObraDescricao").value.trim();
+            
+            if(!data) {
+                alert("Selecione a data da doação.");
+                return;
+            }
+            if(isNaN(valor) || valor <= 0) {
+                alert("Digite um valor válido para a doação.");
+                return;
+            }
+            if(!doador) {
+                doador = "Anônimo";
+            }
+            if(!descricao) {
+                descricao = "Doação para obra";
+            }
+            
             await registrarDoacaoObraFirebase(data, doador, descricao, valor);
+            
+            // Limpar o formulário
             document.getElementById("doacaoObraValor").value = "";
             document.getElementById("doacaoObraDoador").value = "";
             document.getElementById("doacaoObraDescricao").value = "";
+            // Manter a data atual
+            document.getElementById("doacaoObraData").value = new Date().toISOString().slice(0,10);
         });
         
         document.getElementById("btnFiltrarDoacaoObra")?.addEventListener("click", () => { filtroDoacaoObraMes = document.getElementById("filtroDoacaoObraMes").value; renderObra(); });
@@ -1271,7 +1352,6 @@
     
     // Inicializar Firebase e listeners
     function initFirebase() {
-        // Verificar conexão com Firebase
         database.ref('.info/connected').on('value', (snap) => {
             updateSyncIndicator(snap.val());
         });
