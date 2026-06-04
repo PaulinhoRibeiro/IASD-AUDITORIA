@@ -213,6 +213,15 @@
             z-index: 999;
         }
         .connection-status.offline { background: #dc3545; }
+        .categoria-item { 
+            display: inline-block; 
+            background: #e8f5e9; 
+            padding: 5px 12px; 
+            border-radius: 20px; 
+            margin: 4px 8px 4px 0; 
+            font-size: 0.8rem; 
+        }
+        .lista-categorias { margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -313,7 +322,7 @@
                 <h3><i class="fas fa-list-ul"></i> Lançamentos</h3>
                 <div class="month-filter"><input type="month" id="filtroListaMes"><button id="filtrarListaBtn" class="btn-secondary">Filtrar</button><button id="limparFiltroLista" class="btn-secondary">Todas</button><button id="mostrarPendentesBtn" class="btn-secondary">Pendentes</button></div>
                 <div class="anciao-badge" id="anciaoHint" style="display: none;"><i class="fas fa-user-tie"></i><div><strong>Você é o Ancião</strong><br>Clique ✅ para aprovar</div></div>
-                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th></tr></thead><tbody id="tbodyDespesas"></tbody><tr></div>
+                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th></tr></thead><tbody id="tbodyDespesas"></tbody>}</div>
             </div>
 
             <div class="panel"><h3><i class="fas fa-chart-line"></i> Histórico de Entradas</h3><div class="table-wrapper"><table id="tabelaEntradas"><thead><tr><th>Mês</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Data</th><th>Ações</th></tr></thead><tbody id="tbodyEntradas"></tbody></table></div></div>
@@ -440,7 +449,7 @@
     let currentUser = null;
     let despesas = [];
     let entradas = [];
-    let categorias = ["Culto", "Manutenção", "Música", "Eventos", "Material de Limpeza", "Comunicação", "Educação Cristã"];
+    let categorias = [];
     let auditLog = [];
     let graficoChart = null;
     let graficoObraChart = null;
@@ -452,6 +461,21 @@
     let doacoesObra = [];
     let filtroEtapaObra = "";
     let filtroDoacaoObraMes = "";
+
+    // Função para carregar categorias do Firebase
+    async function carregarCategorias() {
+        const snapshot = await database.ref('categorias').once('value');
+        const categoriasFirebase = snapshot.val();
+        if (categoriasFirebase && Array.isArray(categoriasFirebase) && categoriasFirebase.length > 0) {
+            categorias = categoriasFirebase;
+        } else {
+            // Categorias padrão
+            categorias = ["Culto", "Manutenção", "Música", "Eventos", "Material de Limpeza", "Comunicação", "Educação Cristã"];
+            await database.ref('categorias').set(categorias);
+        }
+        renderCategoriasSelect();
+        renderCategorias();
+    }
 
     function ajustarPermissoesPorPerfil() {
         const isTesoureiro = currentUser?.role === 'tesoureiro';
@@ -485,15 +509,13 @@
     
     async function carregarDados() {
         console.log("🔄 Carregando dados...");
+        await carregarCategorias(); // carrega categorias primeiro
         
         const despesasSnap = await database.ref('despesas').once('value');
         despesas = despesasSnap.val() ? Object.values(despesasSnap.val()) : [];
         
         const entradasSnap = await database.ref('entradas').once('value');
         entradas = entradasSnap.val() ? Object.values(entradasSnap.val()) : [];
-        
-        console.log("📊 Entradas carregadas:", entradas);
-        console.log("📝 Despesas carregadas:", despesas);
         
         const doacoesSnap = await database.ref('obra/doacoes').once('value');
         doacoesObra = doacoesSnap.val() ? Object.values(doacoesSnap.val()) : [];
@@ -592,7 +614,7 @@
         if(!tbody) return;
         let dados = [...entradas].sort((a,b) => b.mes.localeCompare(a.mes));
         if(dados.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma entrada registrada</td><td>";
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhuma entrada registrada</td></tr>";
             return;
         }
         tbody.innerHTML = "";
@@ -624,30 +646,23 @@
         });
     }
     
-    // FUNÇÃO CORRIGIDA - Cálculo de entradas por mês
     function getEntradasPorMes(mes) {
         const entradasFiltradas = entradas.filter(e => e.mes === mes);
         const total = entradasFiltradas.reduce((s,e) => s + e.valor, 0);
-        console.log(`📊 Entradas em ${mes}:`, entradasFiltradas, "Total:", total);
         return total;
     }
     
-    // FUNÇÃO CORRIGIDA - Cálculo de despesas por mês
     function getDespesasPorMes(mes) {
         const despesasAprovadas = despesas.filter(d => d.mesAno === mes && d.status === 'aprovado');
         const total = despesasAprovadas.reduce((s,d) => s + d.valor, 0);
-        console.log(`💰 Despesas aprovadas em ${mes}:`, despesasAprovadas, "Total:", total);
         return total;
     }
     
-    // FUNÇÃO CORRIGIDA - Dashboard
     function refreshDashboard() {
         const mes = document.getElementById("filtroMesDashboard")?.value || new Date().toISOString().slice(0,7);
         const totalEntradas = getEntradasPorMes(mes);
         const totalDespesas = getDespesasPorMes(mes);
         const saldo = totalEntradas - totalDespesas;
-        
-        console.log(`📊 DASHBOARD - Mês: ${mes} | Entradas: R$ ${totalEntradas} | Despesas: R$ ${totalDespesas} | Saldo: R$ ${saldo}`);
         
         document.getElementById("totalEntradasMes").innerHTML = `R$ ${totalEntradas.toFixed(2).replace('.',',')}`;
         document.getElementById("totalDespesasMes").innerHTML = `R$ ${totalDespesas.toFixed(2).replace('.',',')}`;
@@ -656,7 +671,6 @@
         if(saldo < 0) document.getElementById("saldoMes").style.color = "#b91c1c";
         else document.getElementById("saldoMes").style.color = "#1e4a2f";
         
-        // Atualizar gráfico
         if(graficoChart) graficoChart.destroy();
         const ctx = document.getElementById("graficoComparativo").getContext("2d");
         graficoChart = new Chart(ctx, { 
@@ -795,6 +809,20 @@
             span.innerHTML = `<i class="fas fa-tag"></i> ${cat} ${currentUser?.role === 'tesoureiro' ? `<i class="fas fa-trash-alt delete-cat" data-cat="${cat}" style="cursor:pointer; margin-left:8px; color:#b91c1c;"></i>` : ''}`;
             container.appendChild(span);
         });
+        
+        // Adicionar evento de deletar categoria
+        document.querySelectorAll(".delete-cat").forEach(el => {
+            el.addEventListener("click", async (e) => {
+                if(currentUser?.role !== 'tesoureiro') return;
+                const cat = el.getAttribute("data-cat");
+                if(confirm(`Deseja remover a categoria "${cat}"?`)) {
+                    categorias = categorias.filter(c => c !== cat);
+                    await database.ref('categorias').set(categorias);
+                    alert("✅ Categoria removida!");
+                    // O listener do Firebase atualizará a interface
+                }
+            });
+        });
     }
     
     function renderCategoriasSelect() {
@@ -828,7 +856,6 @@
         await carregarDados();
     }
     
-    // FUNÇÃO CORRIGIDA - Registrar Entrada
     async function registrarEntrada(mes, valor, descricao) {
         const nova = { 
             id: Date.now(), 
@@ -838,10 +865,9 @@
             registradoPor: currentUser.nome, 
             dataRegistro: new Date().toISOString().split('T')[0] 
         };
-        console.log("💾 Salvando entrada:", nova);
         await database.ref(`entradas/${nova.id}`).set(nova);
         alert(`✅ Entrada de R$ ${valor} registrada para ${mes}!`);
-        await carregarDados(); // Recarregar tudo para atualizar o dashboard
+        await carregarDados();
     }
     
     async function registrarDoacao(data, doador, descricao, valor) {
@@ -957,7 +983,6 @@
             document.getElementById("doacaoObraDescricao").value = "";
         });
         
-        // FUNÇÃO CORRIGIDA - Registrar Entrada
         document.getElementById("btnRegistrarEntrada")?.addEventListener("click", async () => {
             if(currentUser?.role !== 'tesoureiro') return alert("Apenas o Tesoureiro pode registrar entradas.");
             const mes = document.getElementById("entradaMes").value;
@@ -997,14 +1022,19 @@
         
         document.getElementById("btnAddCategoria")?.addEventListener("click", async () => {
             const nome = document.getElementById("novaCategoria").value.trim();
-            if(nome && currentUser?.role === 'tesoureiro') {
-                if(!categorias.includes(nome)) {
+            if (nome && currentUser?.role === 'tesoureiro') {
+                if (!categorias.includes(nome)) {
                     categorias.push(nome);
                     await database.ref('categorias').set(categorias);
                     document.getElementById("novaCategoria").value = "";
                     alert(`✅ Categoria "${nome}" adicionada!`);
-                } else alert("⚠️ Categoria já existe!");
-            } else alert("Apenas Tesoureiro pode adicionar categorias.");
+                    // O listener do Firebase atualizará a interface
+                } else {
+                    alert("⚠️ Categoria já existe!");
+                }
+            } else {
+                alert("Apenas Tesoureiro pode adicionar categorias.");
+            }
         });
         
         document.getElementById("btnAddEtapa")?.addEventListener("click", async () => {
@@ -1123,6 +1153,16 @@
     database.ref('obra/doacoes').on('value', () => carregarDados());
     database.ref('obra/etapas').on('value', () => carregarDados());
     database.ref('obra/gastos').on('value', () => carregarDados());
+    
+    // Listener para categorias em tempo real
+    database.ref('categorias').on('value', (snapshot) => {
+        const categoriasFirebase = snapshot.val();
+        if (categoriasFirebase && Array.isArray(categoriasFirebase)) {
+            categorias = categoriasFirebase;
+            renderCategoriasSelect();
+            renderCategorias();
+        }
+    });
     
     setupEventListeners();
     checkLoggedUser();
