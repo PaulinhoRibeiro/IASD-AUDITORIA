@@ -222,6 +222,7 @@
             font-size: 0.8rem; 
         }
         .lista-categorias { margin-top: 10px; }
+        .diagnostic-btn { background: #17a2b8; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -267,6 +268,7 @@
                 <span id="userNameDisplay"><i class="fas fa-user-shield"></i> Carregando...</span>
                 <div class="reset-area">
                     <button id="btnResetSystem" class="reset-system-btn"><i class="fas fa-trash-alt"></i> Resetar Sistema</button>
+                    <button id="btnDiagnostic" class="diagnostic-btn btn-secondary"><i class="fas fa-stethoscope"></i> Diagnóstico</button>
                     <button id="btnLogout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Sair</button>
                 </div>
             </div>
@@ -284,6 +286,9 @@
                 <div class="card"><div class="card-title"><i class="fas fa-arrow-up"></i> Despesas (Mês)</div><div class="card-value card-value-despesa" id="totalDespesasMes">R$ 0,00</div><div class="card-badge"><i class="fas fa-receipt"></i> Aprovadas</div></div>
                 <div class="card"><div class="card-title"><i class="fas fa-wallet"></i> Saldo do Mês</div><div class="card-value card-value-saldo" id="saldoMes">R$ 0,00</div><div class="card-badge"><i class="fas fa-chart-line"></i> Entradas - Despesas</div></div>
                 <div class="card"><div class="card-title"><i class="fas fa-clock"></i> Pendentes</div><div class="card-value" id="pendentesCount">0</div><div class="card-badge"><i class="fas fa-hourglass-half"></i> Aguardando Ancião</div></div>
+            </div>
+            <div style="text-align: right; margin-bottom: 10px;">
+                <button id="btnForceRefresh" class="btn-secondary" style="background:#2c7a4a; color:white;"><i class="fas fa-sync-alt"></i> Forçar Atualização do Dashboard</button>
             </div>
 
             <div class="two-columns">
@@ -462,7 +467,7 @@
     let filtroEtapaObra = "";
     let filtroDoacaoObraMes = "";
 
-    // Função para carregar categorias do Firebase
+    // Função para carregar categorias
     async function carregarCategorias() {
         try {
             const snapshot = await database.ref('categorias').once('value');
@@ -470,30 +475,48 @@
             if (categoriasFirebase && Array.isArray(categoriasFirebase) && categoriasFirebase.length > 0) {
                 categorias = categoriasFirebase;
             } else {
-                // Categorias padrão
                 categorias = ["Culto", "Manutenção", "Música", "Eventos", "Material de Limpeza", "Comunicação", "Educação Cristã"];
                 await database.ref('categorias').set(categorias);
             }
-            console.log("Categorias carregadas:", categorias);
+            console.log("✅ Categorias carregadas:", categorias);
             renderCategoriasSelect();
             renderCategorias();
         } catch (error) {
-            console.error("Erro ao carregar categorias:", error);
+            console.error("❌ Erro ao carregar categorias:", error);
             categorias = ["Culto", "Manutenção", "Música", "Eventos", "Material de Limpeza", "Comunicação", "Educação Cristã"];
             renderCategoriasSelect();
             renderCategorias();
         }
     }
 
+    // Função de diagnóstico
+    function diagnostic() {
+        const mesAtual = document.getElementById("filtroMesDashboard")?.value || new Date().toISOString().slice(0,7);
+        console.group("🔍 DIAGNÓSTICO COMPLETO");
+        console.log("Usuário atual:", currentUser);
+        console.log("Total de entradas no array:", entradas.length);
+        console.log("Entradas detalhadas:", entradas);
+        console.log("Total de despesas no array:", despesas.length);
+        console.log("Despesas detalhadas:", despesas);
+        console.log(`Mês selecionado no filtro: ${mesAtual}`);
+        const entradasMes = entradas.filter(e => e.mes === mesAtual);
+        const despesasAprovMes = despesas.filter(d => d.mesAno === mesAtual && d.status === 'aprovado');
+        console.log(`Entradas no mês ${mesAtual}:`, entradasMes);
+        console.log(`Despesas aprovadas no mês ${mesAtual}:`, despesasAprovMes);
+        const totalEnt = entradasMes.reduce((s,e) => s + e.valor, 0);
+        const totalDesp = despesasAprovMes.reduce((s,d) => s + d.valor, 0);
+        console.log(`💰 Total Entradas: R$ ${totalEnt.toFixed(2)}`);
+        console.log(`💰 Total Despesas: R$ ${totalDesp.toFixed(2)}`);
+        console.log(`⚖️ Saldo: R$ ${(totalEnt - totalDesp).toFixed(2)}`);
+        console.groupEnd();
+        alert(`Diagnóstico completo no console (F12).\nEntradas (${mesAtual}): R$ ${totalEnt.toFixed(2)}\nDespesas aprovadas: R$ ${totalDesp.toFixed(2)}\nSaldo: R$ ${(totalEnt - totalDesp).toFixed(2)}`);
+    }
+
     function ajustarPermissoesPorPerfil() {
         const isTesoureiro = currentUser?.role === 'tesoureiro';
-        const registrarDoacaoPanel = document.getElementById("registrarDoacaoPanel");
-        const registrarGastoPanel = document.getElementById("registrarGastoPanel");
-        const novaEtapaPanel = document.getElementById("novaEtapaPanel");
-        
-        if(registrarDoacaoPanel) registrarDoacaoPanel.style.display = isTesoureiro ? 'block' : 'none';
-        if(registrarGastoPanel) registrarGastoPanel.style.display = isTesoureiro ? 'block' : 'none';
-        if(novaEtapaPanel) novaEtapaPanel.style.display = isTesoureiro ? 'block' : 'none';
+        document.getElementById("registrarDoacaoPanel")?.style.setProperty('display', isTesoureiro ? 'block' : 'none');
+        document.getElementById("registrarGastoPanel")?.style.setProperty('display', isTesoureiro ? 'block' : 'none');
+        document.getElementById("novaEtapaPanel")?.style.setProperty('display', isTesoureiro ? 'block' : 'none');
     }
     
     async function aprovarDespesa(id) {
@@ -503,20 +526,19 @@
             despesa.aprovadoPor = currentUser.nome;
             await database.ref(`despesas/${id}`).set(despesa);
             alert(`✅ Despesa aprovada! Valor: R$ ${despesa.valor.toFixed(2)}`);
-            // Não precisa chamar carregarDados() porque o listener do Firebase fará isso automaticamente
+            // O listener atualizará os dados
         }
     }
     
     async function excluirDespesa(id) {
         if(confirm("Excluir esta despesa?")) {
             await database.ref(`despesas/${id}`).remove();
-            alert("✅ Despesa excluída!");
         }
     }
     
     async function carregarDados() {
         console.log("🔄 Carregando dados...");
-        await carregarCategorias(); // carrega categorias primeiro
+        await carregarCategorias();
         
         const despesasSnap = await database.ref('despesas').once('value');
         despesas = despesasSnap.val() ? Object.values(despesasSnap.val()) : [];
@@ -533,12 +555,11 @@
         const gastosSnap = await database.ref('obra/gastos').once('value');
         obraGastos = gastosSnap.val() ? Object.values(gastosSnap.val()) : [];
         
-        // Atualiza todos os componentes visuais
         renderTabelaDespesas();
         renderTabelaEntradas();
-        refreshDashboard();      // ← atualiza cards e gráfico da tesouraria
+        refreshDashboard();      // ← força atualização dos cards e gráfico
         renderTabelaDoacoes();
-        renderObra();            // ← atualiza gráfico da obra
+        renderObra();
         ajustarPermissoesPorPerfil();
     }
     
@@ -585,43 +606,29 @@
             tbody.appendChild(tr);
         });
         
-        // Reaplicar eventos (pois o innerHTML os removeu)
+        // Eventos
         document.querySelectorAll(".approve-expense").forEach(btn => {
-            btn.removeEventListener("click", aprovarHandler);
-            btn.addEventListener("click", aprovarHandler);
+            btn.onclick = (e) => aprovarDespesa(parseInt(btn.getAttribute("data-id")));
         });
         document.querySelectorAll(".delete-expense").forEach(btn => {
-            btn.removeEventListener("click", deletarHandler);
-            btn.addEventListener("click", deletarHandler);
+            btn.onclick = (e) => excluirDespesa(parseInt(btn.getAttribute("data-id")));
         });
         document.querySelectorAll(".comprovante-link").forEach(el => {
-            el.removeEventListener("click", comprovanteHandler);
-            el.addEventListener("click", comprovanteHandler);
+            el.onclick = (e) => {
+                const id = parseInt(el.getAttribute("data-id"));
+                const exp = despesas.find(d => d.id === id);
+                if(exp?.comprovanteBase64) {
+                    const win = window.open();
+                    win.document.write(`<html><body style="text-align:center; padding:20px;"><h3>${exp.descricao}</h3><img src="${exp.comprovanteBase64}" style="max-width:100%; border-radius:12px;"/><br><br><button onclick="window.close()">Fechar</button></body></html>`);
+                } else {
+                    alert("Nenhum comprovante anexado.");
+                }
+            };
         });
         
         document.getElementById("pendentesCount").innerHTML = despesas.filter(d => d.status === 'pendente').length;
         const anciaoHint = document.getElementById("anciaoHint");
         if(anciaoHint) anciaoHint.style.display = currentUser?.role === 'anciao' ? 'flex' : 'none';
-    }
-
-    // Handlers separados para poder remover eventos corretamente
-    function aprovarHandler(e) {
-        const id = parseInt(e.currentTarget.getAttribute("data-id"));
-        aprovarDespesa(id);
-    }
-    function deletarHandler(e) {
-        const id = parseInt(e.currentTarget.getAttribute("data-id"));
-        excluirDespesa(id);
-    }
-    function comprovanteHandler(e) {
-        const id = parseInt(e.currentTarget.getAttribute("data-id"));
-        const exp = despesas.find(d => d.id === id);
-        if(exp?.comprovanteBase64) {
-            const win = window.open();
-            win.document.write(`<html><body style="text-align:center; padding:20px;"><h3>${exp.descricao}</h3><img src="${exp.comprovanteBase64}" style="max-width:100%; border-radius:12px;"/><br><br><button onclick="window.close()">Fechar</button></body></html>`);
-        } else {
-            alert("Nenhum comprovante anexado.");
-        }
     }
     
     function renderTabelaEntradas() {
@@ -651,29 +658,26 @@
         });
         
         document.querySelectorAll(".delete-entrada").forEach(btn => {
-            btn.removeEventListener("click", deletarEntradaHandler);
-            btn.addEventListener("click", deletarEntradaHandler);
+            btn.onclick = async (e) => {
+                const id = parseInt(btn.getAttribute("data-id"));
+                if(confirm("Excluir esta entrada?")) {
+                    await database.ref(`entradas/${id}`).remove();
+                }
+            };
         });
-    }
-    
-    async function deletarEntradaHandler(e) {
-        const id = parseInt(e.currentTarget.getAttribute("data-id"));
-        if(confirm("Excluir esta entrada?")) {
-            await database.ref(`entradas/${id}`).remove();
-        }
     }
     
     function getEntradasPorMes(mes) {
         const entradasFiltradas = entradas.filter(e => e.mes === mes);
         const total = entradasFiltradas.reduce((s,e) => s + e.valor, 0);
-        console.log(`Entradas em ${mes}: R$ ${total}`, entradasFiltradas);
+        console.log(`📊 Entradas em ${mes}: R$ ${total} (${entradasFiltradas.length} registros)`);
         return total;
     }
     
     function getDespesasPorMes(mes) {
         const despesasAprovadas = despesas.filter(d => d.mesAno === mes && d.status === 'aprovado');
         const total = despesasAprovadas.reduce((s,d) => s + d.valor, 0);
-        console.log(`Despesas aprovadas em ${mes}: R$ ${total}`, despesasAprovadas);
+        console.log(`📊 Despesas aprovadas em ${mes}: R$ ${total} (${despesasAprovadas.length} registros)`);
         return total;
     }
     
@@ -739,20 +743,16 @@
         });
         
         document.querySelectorAll(".delete-doacao").forEach(btn => {
-            btn.removeEventListener("click", deletarDoacaoHandler);
-            btn.addEventListener("click", deletarDoacaoHandler);
+            btn.onclick = async (e) => {
+                const id = parseInt(btn.getAttribute("data-id"));
+                if(confirm("Excluir esta doação?")) {
+                    await database.ref(`obra/doacoes/${id}`).remove();
+                }
+            };
         });
     }
     
-    async function deletarDoacaoHandler(e) {
-        const id = parseInt(e.currentTarget.getAttribute("data-id"));
-        if(confirm("Excluir esta doação?")) {
-            await database.ref(`obra/doacoes/${id}`).remove();
-        }
-    }
-    
     function renderObra() {
-        // Calcular total de gastos aprovados por etapa
         const gastoPorEtapa = {};
         obraGastos.forEach(gasto => {
             if (gasto.status === 'aprovado') {
@@ -762,12 +762,10 @@
             }
         });
         
-        // Atualizar o campo 'realizado' de cada etapa
         obraEtapas.forEach(etapa => {
             etapa.realizado = gastoPorEtapa[etapa.nome] || 0;
         });
         
-        // Totais para cards
         const totalDoacoes = doacoesObra.reduce((s,d) => s + (d.valor || 0), 0);
         const totalGasto = obraGastos.filter(g => g.status === 'aprovado').reduce((s,g) => s + g.valor, 0);
         const saldo = totalDoacoes - totalGasto;
@@ -778,7 +776,6 @@
         document.getElementById("obraSaldo").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
         document.getElementById("obraProgresso").innerHTML = `${progresso.toFixed(1)}%`;
         
-        // Gráfico da obra
         const labels = obraEtapas.map(e => e.nome);
         const orcamentos = obraEtapas.map(e => e.orcamento);
         const realizados = obraEtapas.map(e => e.realizado);
@@ -799,7 +796,6 @@
             });
         }
         
-        // Lista de etapas
         const etapasContainer = document.getElementById("etapasContainer");
         if (etapasContainer) {
             if (obraEtapas.length === 0) {
@@ -823,7 +819,6 @@
             }
         }
         
-        // Selects de etapa
         const selectEtapa = document.getElementById("obraEtapa");
         const selectFiltro = document.getElementById("filtroEtapaObra");
         if (selectEtapa) {
@@ -834,7 +829,6 @@
             selectFiltro.value = filtroEtapaObra;
         }
         
-        // Tabela de gastos
         let gastosFiltrados = filtroEtapaObra ? obraGastos.filter(g => g.etapa === filtroEtapaObra) : obraGastos;
         gastosFiltrados.sort((a,b) => b.id - a.id);
         const tbodyGastos = document.getElementById("tbodyObra");
@@ -877,19 +871,16 @@
         });
         
         document.querySelectorAll(".delete-cat").forEach(el => {
-            el.removeEventListener("click", deletarCategoriaHandler);
-            el.addEventListener("click", deletarCategoriaHandler);
+            el.onclick = async (e) => {
+                if(currentUser?.role !== 'tesoureiro') return;
+                const cat = el.getAttribute("data-cat");
+                if(confirm(`Deseja remover a categoria "${cat}"?`)) {
+                    categorias = categorias.filter(c => c !== cat);
+                    await database.ref('categorias').set(categorias);
+                    alert("✅ Categoria removida!");
+                }
+            };
         });
-    }
-    
-    async function deletarCategoriaHandler(e) {
-        if(currentUser?.role !== 'tesoureiro') return;
-        const cat = e.currentTarget.getAttribute("data-cat");
-        if(confirm(`Deseja remover a categoria "${cat}"?`)) {
-            categorias = categorias.filter(c => c !== cat);
-            await database.ref('categorias').set(categorias);
-            alert("✅ Categoria removida!");
-        }
     }
     
     function renderCategoriasSelect() {
@@ -903,8 +894,6 @@
                 select.appendChild(op);
             });
             console.log("Select de categorias populado com:", categorias);
-        } else {
-            console.error("Elemento categoriaSelect não encontrado!");
         }
     }
     
@@ -1023,6 +1012,13 @@
             });
         });
         
+        document.getElementById("btnForceRefresh")?.addEventListener("click", () => {
+            refreshDashboard();
+            alert("Dashboard atualizado manualmente!");
+        });
+        
+        document.getElementById("btnDiagnostic")?.addEventListener("click", diagnostic);
+        
         document.getElementById("btnRecarregarDoacoes")?.addEventListener("click", async () => {
             await carregarDados();
             alert(`✅ ${doacoesObra.length} doações carregadas!`);
@@ -1080,7 +1076,6 @@
         });
         
         document.getElementById("btnAddCategoria")?.addEventListener("click", async () => {
-            console.log("Botão adicionar categoria clicado. currentUser:", currentUser);
             if (currentUser && currentUser.role === 'tesoureiro') {
                 const nome = document.getElementById("novaCategoria").value.trim();
                 if (nome) {
@@ -1096,8 +1091,7 @@
                     alert("Digite um nome para a categoria.");
                 }
             } else {
-                alert("Apenas o Tesoureiro pode adicionar categorias. Verifique se você está logado corretamente.");
-                console.warn("Permissão negada. currentUser:", currentUser);
+                alert("Apenas o Tesoureiro pode adicionar categorias.");
             }
         });
         
@@ -1211,41 +1205,34 @@
         }
     }
     
-    // Listeners em tempo real – ao invés de recarregar tudo, apenas atualiza os dados e depois renderiza
-    database.ref('despesas').on('value', async () => {
-        const snapshot = await database.ref('despesas').once('value');
-        despesas = snapshot.val() ? Object.values(snapshot.val()) : [];
+    // Listeners otimizados que apenas atualizam as variáveis e chamam refreshDashboard
+    database.ref('despesas').on('value', async (snap) => {
+        despesas = snap.val() ? Object.values(snap.val()) : [];
         renderTabelaDespesas();
         refreshDashboard();
     });
-    database.ref('entradas').on('value', async () => {
-        const snapshot = await database.ref('entradas').once('value');
-        entradas = snapshot.val() ? Object.values(snapshot.val()) : [];
+    database.ref('entradas').on('value', async (snap) => {
+        entradas = snap.val() ? Object.values(snap.val()) : [];
         renderTabelaEntradas();
         refreshDashboard();
     });
-    database.ref('obra/doacoes').on('value', async () => {
-        const snapshot = await database.ref('obra/doacoes').once('value');
-        doacoesObra = snapshot.val() ? Object.values(snapshot.val()) : [];
+    database.ref('obra/doacoes').on('value', async (snap) => {
+        doacoesObra = snap.val() ? Object.values(snap.val()) : [];
         renderTabelaDoacoes();
         renderObra();
     });
-    database.ref('obra/etapas').on('value', async () => {
-        const snapshot = await database.ref('obra/etapas').once('value');
-        obraEtapas = snapshot.val() ? Object.values(snapshot.val()) : [];
+    database.ref('obra/etapas').on('value', async (snap) => {
+        obraEtapas = snap.val() ? Object.values(snap.val()) : [];
         renderObra();
     });
-    database.ref('obra/gastos').on('value', async () => {
-        const snapshot = await database.ref('obra/gastos').once('value');
-        obraGastos = snapshot.val() ? Object.values(snapshot.val()) : [];
+    database.ref('obra/gastos').on('value', async (snap) => {
+        obraGastos = snap.val() ? Object.values(snap.val()) : [];
         renderObra();
     });
-    
-    // Listener para categorias em tempo real
-    database.ref('categorias').on('value', (snapshot) => {
-        const categoriasFirebase = snapshot.val();
-        if (categoriasFirebase && Array.isArray(categoriasFirebase)) {
-            categorias = categoriasFirebase;
+    database.ref('categorias').on('value', (snap) => {
+        const cat = snap.val();
+        if (cat && Array.isArray(cat)) {
+            categorias = cat;
             renderCategoriasSelect();
             renderCategorias();
         }
