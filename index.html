@@ -322,7 +322,7 @@
                 <h3><i class="fas fa-list-ul"></i> Lançamentos</h3>
                 <div class="month-filter"><input type="month" id="filtroListaMes"><button id="filtrarListaBtn" class="btn-secondary">Filtrar</button><button id="limparFiltroLista" class="btn-secondary">Todas</button><button id="mostrarPendentesBtn" class="btn-secondary">Pendentes</button></div>
                 <div class="anciao-badge" id="anciaoHint" style="display: none;"><i class="fas fa-user-tie"></i><div><strong>Você é o Ancião</strong><br>Clique ✅ para aprovar</div></div>
-                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th></tr></thead><tbody id="tbodyDespesas"></tbody></table></div>
+                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th></tr></thead><tbody id="tbodyDespesas"></tbody></tr></div>
             </div>
 
             <div class="panel"><h3><i class="fas fa-chart-line"></i> Histórico de Entradas</h3><div class="table-wrapper"><table id="tabelaEntradas"><thead><tr><th>Mês</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Data</th><th>Ações</th></tr></thead><tbody id="tbodyEntradas"></tbody></table></div></div>
@@ -538,7 +538,7 @@
         renderTabelaEntradas();
         refreshDashboard();
         renderTabelaDoacoes();
-        renderObra();
+        renderObra();  // ← aqui o gráfico da obra é atualizado com valores corrigidos
         ajustarPermissoesPorPerfil();
     }
     
@@ -699,7 +699,7 @@
         });
     }
     
-    // ==================== FUNÇÕES DA OBRA ====================
+    // ==================== FUNÇÕES DA OBRA (CORRIGIDAS) ====================
     function renderTabelaDoacoes() {
         let doacoesFiltradas = filtroDoacaoObraMes ? doacoesObra.filter(d => d.data?.substring(0,7) === filtroDoacaoObraMes) : doacoesObra;
         doacoesFiltradas.sort((a,b) => b.id - a.id);
@@ -740,6 +740,22 @@
     }
     
     function renderObra() {
+        // 1. Calcular total de gastos aprovados por etapa
+        const gastoPorEtapa = {};
+        obraGastos.forEach(gasto => {
+            if (gasto.status === 'aprovado') {
+                const etapaNome = gasto.etapa;
+                if (!gastoPorEtapa[etapaNome]) gastoPorEtapa[etapaNome] = 0;
+                gastoPorEtapa[etapaNome] += gasto.valor;
+            }
+        });
+        
+        // 2. Atualizar o campo 'realizado' de cada etapa com o total gasto
+        obraEtapas.forEach(etapa => {
+            etapa.realizado = gastoPorEtapa[etapa.nome] || 0;
+        });
+        
+        // 3. Totais para os cards
         const totalDoacoes = doacoesObra.reduce((s,d) => s + (d.valor || 0), 0);
         const totalGasto = obraGastos.filter(g => g.status === 'aprovado').reduce((s,g) => s + g.valor, 0);
         const saldo = totalDoacoes - totalGasto;
@@ -750,51 +766,77 @@
         document.getElementById("obraSaldo").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
         document.getElementById("obraProgresso").innerHTML = `${progresso.toFixed(1)}%`;
         
+        // 4. Gráfico da obra (agora com valores realizados)
         const labels = obraEtapas.map(e => e.nome);
         const orcamentos = obraEtapas.map(e => e.orcamento);
         const realizados = obraEtapas.map(e => e.realizado);
-        if(graficoObraChart) graficoObraChart.destroy();
-        if(labels.length > 0) {
+        
+        if (graficoObraChart) graficoObraChart.destroy();
+        if (labels.length > 0) {
             const ctx = document.getElementById("graficoObra").getContext("2d");
-            graficoObraChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Orçamento', data: orcamentos, backgroundColor: '#2c7a4a', borderRadius: 8 }, { label: 'Realizado', data: realizados, backgroundColor: '#f4a261', borderRadius: 8 }] }, options: { responsive: true } });
+            graficoObraChart = new Chart(ctx, { 
+                type: 'bar', 
+                data: { 
+                    labels: labels, 
+                    datasets: [
+                        { label: 'Orçamento', data: orcamentos, backgroundColor: '#2c7a4a', borderRadius: 8 },
+                        { label: 'Realizado', data: realizados, backgroundColor: '#f4a261', borderRadius: 8 }
+                    ] 
+                }, 
+                options: { responsive: true } 
+            });
         }
         
+        // 5. Lista de etapas (com progresso dinâmico)
         const etapasContainer = document.getElementById("etapasContainer");
-        if(etapasContainer) {
-            if(obraEtapas.length === 0) {
+        if (etapasContainer) {
+            if (obraEtapas.length === 0) {
                 etapasContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#6c757d;">Nenhuma etapa cadastrada. Clique em "+ Nova Etapa" para começar.</div>';
             } else {
                 etapasContainer.innerHTML = "";
                 obraEtapas.forEach(etapa => {
-                    const percent = (etapa.realizado / etapa.orcamento) * 100;
-                    etapasContainer.innerHTML += `<div class="obra-etapa-item"><div style="display: flex; justify-content: space-between;"><strong>${etapa.nome}</strong><span>R$ ${etapa.realizado.toFixed(2)} / R$ ${etapa.orcamento.toFixed(2)}</span></div><div class="progress-bar"><div class="progress-fill" style="width: ${Math.min(percent,100)}%"></div></div></div>`;
+                    const percent = etapa.orcamento > 0 ? (etapa.realizado / etapa.orcamento) * 100 : 0;
+                    etapasContainer.innerHTML += `
+                        <div class="obra-etapa-item">
+                            <div style="display: flex; justify-content: space-between;">
+                                <strong>${etapa.nome}</strong>
+                                <span>R$ ${etapa.realizado.toFixed(2)} / R$ ${etapa.orcamento.toFixed(2)}</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${Math.min(percent,100)}%"></div>
+                            </div>
+                        </div>
+                    `;
                 });
             }
         }
         
+        // 6. Atualizar selects de etapa (para registrar gastos e filtrar)
         const selectEtapa = document.getElementById("obraEtapa");
         const selectFiltro = document.getElementById("filtroEtapaObra");
-        if(selectEtapa) {
+        if (selectEtapa) {
             selectEtapa.innerHTML = obraEtapas.length === 0 ? '<option value="">Nenhuma etapa cadastrada</option>' : obraEtapas.map(e => `<option value="${e.nome}">${e.nome}</option>`).join('');
         }
-        if(selectFiltro) {
+        if (selectFiltro) {
             selectFiltro.innerHTML = "<option value=''>Todas as etapas</option>" + obraEtapas.map(e => `<option value="${e.nome}">${e.nome}</option>`).join('');
             selectFiltro.value = filtroEtapaObra;
         }
         
+        // 7. Tabela de gastos (filtrada por etapa)
         let gastosFiltrados = filtroEtapaObra ? obraGastos.filter(g => g.etapa === filtroEtapaObra) : obraGastos;
         gastosFiltrados.sort((a,b) => b.id - a.id);
         const tbodyGastos = document.getElementById("tbodyObra");
-        if(tbodyGastos) {
-            if(gastosFiltrados.length === 0) {
+        if (tbodyGastos) {
+            if (gastosFiltrados.length === 0) {
                 tbodyGastos.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:40px;'><i class='fas fa-inbox'></i> Nenhum gasto registrado</td></tr>";
                 return;
             }
             tbodyGastos.innerHTML = "";
             gastosFiltrados.forEach(g => {
                 let acoes = "";
-                if(currentUser?.role === 'tesoureiro') {
-                    acoes = `<button class="btn-edit" onclick='editarGasto(${g.id})'><i class="fas fa-edit"></i></button><button class="btn-delete" onclick='excluirGasto(${g.id})'><i class="fas fa-trash"></i></button>`;
+                if (currentUser?.role === 'tesoureiro') {
+                    acoes = `<button class="btn-edit" onclick='editarGasto(${g.id})'><i class="fas fa-edit"></i></button>
+                             <button class="btn-delete" onclick='excluirGasto(${g.id})'><i class="fas fa-trash"></i></button>`;
                 }
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
@@ -1051,7 +1093,7 @@
                     alert("Digite um nome para a categoria.");
                 }
             } else {
-                alert("Apenas o Tesoureiro pode adicionar categorias. Se você está logado como tesoureiro, verifique o console.");
+                alert("Apenas o Tesoureiro pode adicionar categorias. Verifique se você está logado corretamente.");
                 console.warn("Permissão negada. currentUser:", currentUser);
             }
         });
