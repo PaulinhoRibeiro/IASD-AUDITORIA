@@ -322,7 +322,7 @@
                 <h3><i class="fas fa-list-ul"></i> Lançamentos</h3>
                 <div class="month-filter"><input type="month" id="filtroListaMes"><button id="filtrarListaBtn" class="btn-secondary">Filtrar</button><button id="limparFiltroLista" class="btn-secondary">Todas</button><button id="mostrarPendentesBtn" class="btn-secondary">Pendentes</button></div>
                 <div class="anciao-badge" id="anciaoHint" style="display: none;"><i class="fas fa-user-tie"></i><div><strong>Você é o Ancião</strong><br>Clique ✅ para aprovar</div></div>
-                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th></tr></thead><tbody id="tbodyDespesas"></tbody></tr></div>
+                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th></tr></thead><tbody id="tbodyDespesas"></tbody></table></div>
             </div>
 
             <div class="panel"><h3><i class="fas fa-chart-line"></i> Histórico de Entradas</h3><div class="table-wrapper"><table id="tabelaEntradas"><thead><tr><th>Mês</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Data</th><th>Ações</th></tr></thead><tbody id="tbodyEntradas"></tbody></table></div></div>
@@ -503,7 +503,7 @@
             despesa.aprovadoPor = currentUser.nome;
             await database.ref(`despesas/${id}`).set(despesa);
             alert(`✅ Despesa aprovada! Valor: R$ ${despesa.valor.toFixed(2)}`);
-            await carregarDados();
+            // Não precisa chamar carregarDados() porque o listener do Firebase fará isso automaticamente
         }
     }
     
@@ -511,7 +511,6 @@
         if(confirm("Excluir esta despesa?")) {
             await database.ref(`despesas/${id}`).remove();
             alert("✅ Despesa excluída!");
-            await carregarDados();
         }
     }
     
@@ -534,11 +533,12 @@
         const gastosSnap = await database.ref('obra/gastos').once('value');
         obraGastos = gastosSnap.val() ? Object.values(gastosSnap.val()) : [];
         
+        // Atualiza todos os componentes visuais
         renderTabelaDespesas();
         renderTabelaEntradas();
-        refreshDashboard();
+        refreshDashboard();      // ← atualiza cards e gráfico da tesouraria
         renderTabelaDoacoes();
-        renderObra();  // ← aqui o gráfico da obra é atualizado com valores corrigidos
+        renderObra();            // ← atualiza gráfico da obra
         ajustarPermissoesPorPerfil();
     }
     
@@ -585,36 +585,43 @@
             tbody.appendChild(tr);
         });
         
+        // Reaplicar eventos (pois o innerHTML os removeu)
         document.querySelectorAll(".approve-expense").forEach(btn => {
-            btn.addEventListener("click", async (e) => {
-                const id = parseInt(btn.getAttribute("data-id"));
-                await aprovarDespesa(id);
-            });
+            btn.removeEventListener("click", aprovarHandler);
+            btn.addEventListener("click", aprovarHandler);
         });
-        
         document.querySelectorAll(".delete-expense").forEach(btn => {
-            btn.addEventListener("click", async (e) => {
-                const id = parseInt(btn.getAttribute("data-id"));
-                await excluirDespesa(id);
-            });
+            btn.removeEventListener("click", deletarHandler);
+            btn.addEventListener("click", deletarHandler);
         });
-        
         document.querySelectorAll(".comprovante-link").forEach(el => {
-            el.addEventListener("click", (e) => {
-                const id = parseInt(el.getAttribute("data-id"));
-                const exp = despesas.find(d => d.id === id);
-                if(exp?.comprovanteBase64) {
-                    const win = window.open();
-                    win.document.write(`<html><body style="text-align:center; padding:20px;"><h3>${exp.descricao}</h3><img src="${exp.comprovanteBase64}" style="max-width:100%; border-radius:12px;"/><br><br><button onclick="window.close()">Fechar</button></body></html>`);
-                } else {
-                    alert("Nenhum comprovante anexado.");
-                }
-            });
+            el.removeEventListener("click", comprovanteHandler);
+            el.addEventListener("click", comprovanteHandler);
         });
         
         document.getElementById("pendentesCount").innerHTML = despesas.filter(d => d.status === 'pendente').length;
         const anciaoHint = document.getElementById("anciaoHint");
         if(anciaoHint) anciaoHint.style.display = currentUser?.role === 'anciao' ? 'flex' : 'none';
+    }
+
+    // Handlers separados para poder remover eventos corretamente
+    function aprovarHandler(e) {
+        const id = parseInt(e.currentTarget.getAttribute("data-id"));
+        aprovarDespesa(id);
+    }
+    function deletarHandler(e) {
+        const id = parseInt(e.currentTarget.getAttribute("data-id"));
+        excluirDespesa(id);
+    }
+    function comprovanteHandler(e) {
+        const id = parseInt(e.currentTarget.getAttribute("data-id"));
+        const exp = despesas.find(d => d.id === id);
+        if(exp?.comprovanteBase64) {
+            const win = window.open();
+            win.document.write(`<html><body style="text-align:center; padding:20px;"><h3>${exp.descricao}</h3><img src="${exp.comprovanteBase64}" style="max-width:100%; border-radius:12px;"/><br><br><button onclick="window.close()">Fechar</button></body></html>`);
+        } else {
+            alert("Nenhum comprovante anexado.");
+        }
     }
     
     function renderTabelaEntradas() {
@@ -644,14 +651,16 @@
         });
         
         document.querySelectorAll(".delete-entrada").forEach(btn => {
-            btn.addEventListener("click", async (e) => {
-                const id = parseInt(btn.getAttribute("data-id"));
-                if(confirm("Excluir esta entrada?")) {
-                    await database.ref(`entradas/${id}`).remove();
-                    await carregarDados();
-                }
-            });
+            btn.removeEventListener("click", deletarEntradaHandler);
+            btn.addEventListener("click", deletarEntradaHandler);
         });
+    }
+    
+    async function deletarEntradaHandler(e) {
+        const id = parseInt(e.currentTarget.getAttribute("data-id"));
+        if(confirm("Excluir esta entrada?")) {
+            await database.ref(`entradas/${id}`).remove();
+        }
     }
     
     function getEntradasPorMes(mes) {
@@ -683,6 +692,7 @@
         if(saldo < 0) document.getElementById("saldoMes").style.color = "#b91c1c";
         else document.getElementById("saldoMes").style.color = "#1e4a2f";
         
+        // Atualizar gráfico
         if(graficoChart) graficoChart.destroy();
         const ctx = document.getElementById("graficoComparativo").getContext("2d");
         graficoChart = new Chart(ctx, { 
@@ -699,7 +709,7 @@
         });
     }
     
-    // ==================== FUNÇÕES DA OBRA (CORRIGIDAS) ====================
+    // ==================== FUNÇÕES DA OBRA ====================
     function renderTabelaDoacoes() {
         let doacoesFiltradas = filtroDoacaoObraMes ? doacoesObra.filter(d => d.data?.substring(0,7) === filtroDoacaoObraMes) : doacoesObra;
         doacoesFiltradas.sort((a,b) => b.id - a.id);
@@ -729,18 +739,20 @@
         });
         
         document.querySelectorAll(".delete-doacao").forEach(btn => {
-            btn.addEventListener("click", async (e) => {
-                const id = parseInt(btn.getAttribute("data-id"));
-                if(confirm("Excluir esta doação?")) {
-                    await database.ref(`obra/doacoes/${id}`).remove();
-                    await carregarDados();
-                }
-            });
+            btn.removeEventListener("click", deletarDoacaoHandler);
+            btn.addEventListener("click", deletarDoacaoHandler);
         });
     }
     
+    async function deletarDoacaoHandler(e) {
+        const id = parseInt(e.currentTarget.getAttribute("data-id"));
+        if(confirm("Excluir esta doação?")) {
+            await database.ref(`obra/doacoes/${id}`).remove();
+        }
+    }
+    
     function renderObra() {
-        // 1. Calcular total de gastos aprovados por etapa
+        // Calcular total de gastos aprovados por etapa
         const gastoPorEtapa = {};
         obraGastos.forEach(gasto => {
             if (gasto.status === 'aprovado') {
@@ -750,12 +762,12 @@
             }
         });
         
-        // 2. Atualizar o campo 'realizado' de cada etapa com o total gasto
+        // Atualizar o campo 'realizado' de cada etapa
         obraEtapas.forEach(etapa => {
             etapa.realizado = gastoPorEtapa[etapa.nome] || 0;
         });
         
-        // 3. Totais para os cards
+        // Totais para cards
         const totalDoacoes = doacoesObra.reduce((s,d) => s + (d.valor || 0), 0);
         const totalGasto = obraGastos.filter(g => g.status === 'aprovado').reduce((s,g) => s + g.valor, 0);
         const saldo = totalDoacoes - totalGasto;
@@ -766,7 +778,7 @@
         document.getElementById("obraSaldo").innerHTML = `R$ ${saldo.toFixed(2).replace('.',',')}`;
         document.getElementById("obraProgresso").innerHTML = `${progresso.toFixed(1)}%`;
         
-        // 4. Gráfico da obra (agora com valores realizados)
+        // Gráfico da obra
         const labels = obraEtapas.map(e => e.nome);
         const orcamentos = obraEtapas.map(e => e.orcamento);
         const realizados = obraEtapas.map(e => e.realizado);
@@ -787,7 +799,7 @@
             });
         }
         
-        // 5. Lista de etapas (com progresso dinâmico)
+        // Lista de etapas
         const etapasContainer = document.getElementById("etapasContainer");
         if (etapasContainer) {
             if (obraEtapas.length === 0) {
@@ -811,7 +823,7 @@
             }
         }
         
-        // 6. Atualizar selects de etapa (para registrar gastos e filtrar)
+        // Selects de etapa
         const selectEtapa = document.getElementById("obraEtapa");
         const selectFiltro = document.getElementById("filtroEtapaObra");
         if (selectEtapa) {
@@ -822,7 +834,7 @@
             selectFiltro.value = filtroEtapaObra;
         }
         
-        // 7. Tabela de gastos (filtrada por etapa)
+        // Tabela de gastos
         let gastosFiltrados = filtroEtapaObra ? obraGastos.filter(g => g.etapa === filtroEtapaObra) : obraGastos;
         gastosFiltrados.sort((a,b) => b.id - a.id);
         const tbodyGastos = document.getElementById("tbodyObra");
@@ -865,16 +877,19 @@
         });
         
         document.querySelectorAll(".delete-cat").forEach(el => {
-            el.addEventListener("click", async (e) => {
-                if(currentUser?.role !== 'tesoureiro') return;
-                const cat = el.getAttribute("data-cat");
-                if(confirm(`Deseja remover a categoria "${cat}"?`)) {
-                    categorias = categorias.filter(c => c !== cat);
-                    await database.ref('categorias').set(categorias);
-                    alert("✅ Categoria removida!");
-                }
-            });
+            el.removeEventListener("click", deletarCategoriaHandler);
+            el.addEventListener("click", deletarCategoriaHandler);
         });
+    }
+    
+    async function deletarCategoriaHandler(e) {
+        if(currentUser?.role !== 'tesoureiro') return;
+        const cat = e.currentTarget.getAttribute("data-cat");
+        if(confirm(`Deseja remover a categoria "${cat}"?`)) {
+            categorias = categorias.filter(c => c !== cat);
+            await database.ref('categorias').set(categorias);
+            alert("✅ Categoria removida!");
+        }
     }
     
     function renderCategoriasSelect() {
@@ -893,11 +908,6 @@
         }
     }
     
-    function renderAuditLog() {
-        const container = document.getElementById("auditLogContainer");
-        if(container) container.innerHTML = "Sistema pronto. Use os botões ✅ para aprovar despesas.";
-    }
-    
     function escapeHtml(str) { 
         if(!str) return ''; 
         return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); 
@@ -908,7 +918,6 @@
         const nova = { id: Date.now(), descricao, valor, categoria, mesAno, status: 'pendente', obs: obs || "", comprovanteBase64, dataLancamento: new Date().toISOString(), aprovadoPor: null };
         await database.ref(`despesas/${nova.id}`).set(nova);
         alert("✅ Despesa lançada! Aguardando aprovação do Ancião.");
-        await carregarDados();
     }
     
     async function registrarEntrada(mes, valor, descricao) {
@@ -922,28 +931,24 @@
         };
         await database.ref(`entradas/${nova.id}`).set(nova);
         alert(`✅ Entrada de R$ ${valor} registrada para ${mes}!`);
-        await carregarDados();
     }
     
     async function registrarDoacao(data, doador, descricao, valor) {
         const nova = { id: Date.now(), data, doador: doador || "Anônimo", descricao: descricao || "Doação para obra", valor: parseFloat(valor), registradoPor: currentUser.nome, dataRegistro: new Date().toISOString().split('T')[0] };
         await database.ref(`obra/doacoes/${nova.id}`).set(nova);
         alert(`✅ Doação de R$ ${valor} registrada!`);
-        await carregarDados();
     }
     
     async function adicionarEtapa(nome, orcamento) {
         const nova = { id: Date.now(), nome, orcamento: parseFloat(orcamento), realizado: 0 };
         await database.ref(`obra/etapas/${nova.id}`).set(nova);
         alert("✅ Etapa adicionada!");
-        await carregarDados();
     }
     
     async function registrarGasto(data, etapa, descricao, fornecedor, valor) {
         const novo = { id: Date.now(), data, etapa, descricao, fornecedor, valor: parseFloat(valor), status: "aprovado" };
         await database.ref(`obra/gastos/${novo.id}`).set(novo);
         alert("✅ Gasto registrado!");
-        await carregarDados();
     }
     
     window.editarGasto = async (id) => {
@@ -957,7 +962,6 @@
         if(novaData && novaEtapa && novaDescricao && novoFornecedor && novoValor) {
             await database.ref(`obra/gastos/${id}`).update({ data: novaData, etapa: novaEtapa, descricao: novaDescricao, fornecedor: novoFornecedor, valor: parseFloat(novoValor) });
             alert("✅ Gasto atualizado!");
-            await carregarDados();
         }
     };
     
@@ -965,7 +969,6 @@
         if(confirm("Excluir este gasto?")) {
             await database.ref(`obra/gastos/${id}`).remove();
             alert("✅ Gasto excluído!");
-            await carregarDados();
         }
     };
     
@@ -1208,12 +1211,35 @@
         }
     }
     
-    // Listeners em tempo real
-    database.ref('despesas').on('value', () => carregarDados());
-    database.ref('entradas').on('value', () => carregarDados());
-    database.ref('obra/doacoes').on('value', () => carregarDados());
-    database.ref('obra/etapas').on('value', () => carregarDados());
-    database.ref('obra/gastos').on('value', () => carregarDados());
+    // Listeners em tempo real – ao invés de recarregar tudo, apenas atualiza os dados e depois renderiza
+    database.ref('despesas').on('value', async () => {
+        const snapshot = await database.ref('despesas').once('value');
+        despesas = snapshot.val() ? Object.values(snapshot.val()) : [];
+        renderTabelaDespesas();
+        refreshDashboard();
+    });
+    database.ref('entradas').on('value', async () => {
+        const snapshot = await database.ref('entradas').once('value');
+        entradas = snapshot.val() ? Object.values(snapshot.val()) : [];
+        renderTabelaEntradas();
+        refreshDashboard();
+    });
+    database.ref('obra/doacoes').on('value', async () => {
+        const snapshot = await database.ref('obra/doacoes').once('value');
+        doacoesObra = snapshot.val() ? Object.values(snapshot.val()) : [];
+        renderTabelaDoacoes();
+        renderObra();
+    });
+    database.ref('obra/etapas').on('value', async () => {
+        const snapshot = await database.ref('obra/etapas').once('value');
+        obraEtapas = snapshot.val() ? Object.values(snapshot.val()) : [];
+        renderObra();
+    });
+    database.ref('obra/gastos').on('value', async () => {
+        const snapshot = await database.ref('obra/gastos').once('value');
+        obraGastos = snapshot.val() ? Object.values(snapshot.val()) : [];
+        renderObra();
+    });
     
     // Listener para categorias em tempo real
     database.ref('categorias').on('value', (snapshot) => {
