@@ -386,7 +386,7 @@
                 </div>
                 <div class="table-wrapper">
                     <table id="tabelaDoacoesObra">
-                        <thead><tr><th>Data</th><th>Doador</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Ações</th></tr></thead>
+                        <thead><tr><th>Data</th><th>Doador</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Ações</th><tr></thead>
                         <tbody id="tbodyDoacoesObra"></tbody>
                     </table>
                 </div>
@@ -526,7 +526,6 @@
             despesa.aprovadoPor = currentUser.nome;
             await database.ref(`despesas/${id}`).set(despesa);
             alert(`✅ Despesa aprovada! Valor: R$ ${despesa.valor.toFixed(2)}`);
-            // O listener atualizará os dados
         }
     }
     
@@ -557,7 +556,7 @@
         
         renderTabelaDespesas();
         renderTabelaEntradas();
-        refreshDashboard();      // ← força atualização dos cards e gráfico
+        refreshDashboard();
         renderTabelaDoacoes();
         renderObra();
         ajustarPermissoesPorPerfil();
@@ -1205,30 +1204,37 @@
         }
     }
     
-    // Listeners otimizados que apenas atualizam as variáveis e chamam refreshDashboard
+    // Listeners em tempo real – atualização imediata do dashboard
     database.ref('despesas').on('value', async (snap) => {
         despesas = snap.val() ? Object.values(snap.val()) : [];
         renderTabelaDespesas();
-        refreshDashboard();
+        refreshDashboard();  // ← força atualização dos cards e gráfico
+        console.log("Listener despesas atualizou. Total despesas:", despesas.length);
     });
+    
     database.ref('entradas').on('value', async (snap) => {
         entradas = snap.val() ? Object.values(snap.val()) : [];
         renderTabelaEntradas();
-        refreshDashboard();
+        refreshDashboard();  // ← força atualização dos cards e gráfico
+        console.log("Listener entradas atualizou. Total entradas:", entradas.length);
     });
+    
     database.ref('obra/doacoes').on('value', async (snap) => {
         doacoesObra = snap.val() ? Object.values(snap.val()) : [];
         renderTabelaDoacoes();
         renderObra();
     });
+    
     database.ref('obra/etapas').on('value', async (snap) => {
         obraEtapas = snap.val() ? Object.values(snap.val()) : [];
         renderObra();
     });
+    
     database.ref('obra/gastos').on('value', async (snap) => {
         obraGastos = snap.val() ? Object.values(snap.val()) : [];
         renderObra();
     });
+    
     database.ref('categorias').on('value', (snap) => {
         const cat = snap.val();
         if (cat && Array.isArray(cat)) {
