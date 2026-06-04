@@ -322,7 +322,7 @@
                 <h3><i class="fas fa-list-ul"></i> Lançamentos</h3>
                 <div class="month-filter"><input type="month" id="filtroListaMes"><button id="filtrarListaBtn" class="btn-secondary">Filtrar</button><button id="limparFiltroLista" class="btn-secondary">Todas</button><button id="mostrarPendentesBtn" class="btn-secondary">Pendentes</button></div>
                 <div class="anciao-badge" id="anciaoHint" style="display: none;"><i class="fas fa-user-tie"></i><div><strong>Você é o Ancião</strong><br>Clique ✅ para aprovar</div></div>
-                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th></tr></thead><tbody id="tbodyDespesas"></tbody>}</div>
+                <div class="table-wrapper"><table id="tabelaDespesas"><thead><tr><th>Mês</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Justificativa</th><th>Comprovante</th><th>Ações</th></tr></thead><tbody id="tbodyDespesas"></tbody></table></div>
             </div>
 
             <div class="panel"><h3><i class="fas fa-chart-line"></i> Histórico de Entradas</h3><div class="table-wrapper"><table id="tabelaEntradas"><thead><tr><th>Mês</th><th>Descrição</th><th>Valor</th><th>Registrado por</th><th>Data</th><th>Ações</th></tr></thead><tbody id="tbodyEntradas"></tbody></table></div></div>
@@ -464,17 +464,25 @@
 
     // Função para carregar categorias do Firebase
     async function carregarCategorias() {
-        const snapshot = await database.ref('categorias').once('value');
-        const categoriasFirebase = snapshot.val();
-        if (categoriasFirebase && Array.isArray(categoriasFirebase) && categoriasFirebase.length > 0) {
-            categorias = categoriasFirebase;
-        } else {
-            // Categorias padrão
+        try {
+            const snapshot = await database.ref('categorias').once('value');
+            const categoriasFirebase = snapshot.val();
+            if (categoriasFirebase && Array.isArray(categoriasFirebase) && categoriasFirebase.length > 0) {
+                categorias = categoriasFirebase;
+            } else {
+                // Categorias padrão
+                categorias = ["Culto", "Manutenção", "Música", "Eventos", "Material de Limpeza", "Comunicação", "Educação Cristã"];
+                await database.ref('categorias').set(categorias);
+            }
+            console.log("Categorias carregadas:", categorias);
+            renderCategoriasSelect();
+            renderCategorias();
+        } catch (error) {
+            console.error("Erro ao carregar categorias:", error);
             categorias = ["Culto", "Manutenção", "Música", "Eventos", "Material de Limpeza", "Comunicação", "Educação Cristã"];
-            await database.ref('categorias').set(categorias);
+            renderCategoriasSelect();
+            renderCategorias();
         }
-        renderCategoriasSelect();
-        renderCategorias();
     }
 
     function ajustarPermissoesPorPerfil() {
@@ -649,12 +657,14 @@
     function getEntradasPorMes(mes) {
         const entradasFiltradas = entradas.filter(e => e.mes === mes);
         const total = entradasFiltradas.reduce((s,e) => s + e.valor, 0);
+        console.log(`Entradas em ${mes}: R$ ${total}`, entradasFiltradas);
         return total;
     }
     
     function getDespesasPorMes(mes) {
         const despesasAprovadas = despesas.filter(d => d.mesAno === mes && d.status === 'aprovado');
         const total = despesasAprovadas.reduce((s,d) => s + d.valor, 0);
+        console.log(`Despesas aprovadas em ${mes}: R$ ${total}`, despesasAprovadas);
         return total;
     }
     
@@ -663,6 +673,8 @@
         const totalEntradas = getEntradasPorMes(mes);
         const totalDespesas = getDespesasPorMes(mes);
         const saldo = totalEntradas - totalDespesas;
+        
+        console.log(`📊 DASHBOARD - Mês: ${mes} | Entradas: R$ ${totalEntradas} | Despesas: R$ ${totalDespesas} | Saldo: R$ ${saldo}`);
         
         document.getElementById("totalEntradasMes").innerHTML = `R$ ${totalEntradas.toFixed(2).replace('.',',')}`;
         document.getElementById("totalDespesasMes").innerHTML = `R$ ${totalDespesas.toFixed(2).replace('.',',')}`;
@@ -810,7 +822,6 @@
             container.appendChild(span);
         });
         
-        // Adicionar evento de deletar categoria
         document.querySelectorAll(".delete-cat").forEach(el => {
             el.addEventListener("click", async (e) => {
                 if(currentUser?.role !== 'tesoureiro') return;
@@ -819,7 +830,6 @@
                     categorias = categorias.filter(c => c !== cat);
                     await database.ref('categorias').set(categorias);
                     alert("✅ Categoria removida!");
-                    // O listener do Firebase atualizará a interface
                 }
             });
         });
@@ -835,6 +845,9 @@
                 op.textContent = c;
                 select.appendChild(op);
             });
+            console.log("Select de categorias populado com:", categorias);
+        } else {
+            console.error("Elemento categoriaSelect não encontrado!");
         }
     }
     
@@ -919,6 +932,7 @@
         if(CREDENCIAIS_REAIS[email] && CREDENCIAIS_REAIS[email].senha === senha) {
             currentUser = { email, role: CREDENCIAIS_REAIS[email].role, nome: CREDENCIAIS_REAIS[email].nome };
             sessionStorage.setItem("currentUser", JSON.stringify(currentUser));
+            console.log("Usuário logado:", currentUser);
             return true;
         }
         return false;
@@ -1021,19 +1035,24 @@
         });
         
         document.getElementById("btnAddCategoria")?.addEventListener("click", async () => {
-            const nome = document.getElementById("novaCategoria").value.trim();
-            if (nome && currentUser?.role === 'tesoureiro') {
-                if (!categorias.includes(nome)) {
-                    categorias.push(nome);
-                    await database.ref('categorias').set(categorias);
-                    document.getElementById("novaCategoria").value = "";
-                    alert(`✅ Categoria "${nome}" adicionada!`);
-                    // O listener do Firebase atualizará a interface
+            console.log("Botão adicionar categoria clicado. currentUser:", currentUser);
+            if (currentUser && currentUser.role === 'tesoureiro') {
+                const nome = document.getElementById("novaCategoria").value.trim();
+                if (nome) {
+                    if (!categorias.includes(nome)) {
+                        categorias.push(nome);
+                        await database.ref('categorias').set(categorias);
+                        document.getElementById("novaCategoria").value = "";
+                        alert(`✅ Categoria "${nome}" adicionada!`);
+                    } else {
+                        alert("⚠️ Categoria já existe!");
+                    }
                 } else {
-                    alert("⚠️ Categoria já existe!");
+                    alert("Digite um nome para a categoria.");
                 }
             } else {
-                alert("Apenas Tesoureiro pode adicionar categorias.");
+                alert("Apenas o Tesoureiro pode adicionar categorias. Se você está logado como tesoureiro, verifique o console.");
+                console.warn("Permissão negada. currentUser:", currentUser);
             }
         });
         
